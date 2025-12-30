@@ -1,0 +1,10 @@
+{
+  "name": "DevxTalk",
+  "version": "1.0.0",
+  "description": "Private ai chatbot testing",
+  "main": "api/proxy.js",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {}
+}

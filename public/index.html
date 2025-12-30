@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Playground</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: Model Configuration -->
+        <div class="panel left-panel">
+            <div class="panel-header">Model Configuration</div>
+            <div class="panel-content">
+                <div class="input-group">
+                    <label>API Key</label>
+                    <div class="password-container">
+                        <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+                        <button class="toggle-password" id="toggleApiKey">👁️</button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Model Name</label>
+                    <input type="text" id="modelName" placeholder="lightning-ai/gpt-oss-20b">
+                </div>
+
+                <div class="input-group">
+                    <label>Base URL</label>
+                    <input type="text" id="baseUrl" placeholder="https://lightning.ai/api/v1">
+                </div>
+
+                <div class="param-row">
+                    <div class="input-group">
+                        <label>Temperature</label>
+                        <input type="number" id="temperature" value="0.7" step="0.1" min="0" max="2">
+                    </div>
+                    <div class="input-group">
+                        <label>Max Tokens</label>
+                        <input type="number" id="maxTokens" value="2048" step="100">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button id="btnAddModel">Add Model</button>
+                    <button class="secondary" id="btnUpdateModel">Update</button>
+                </div>
+
+                <div class="model-list" id="modelList"></div>
+            </div>
+        </div>
+
+        <!-- Middle Panel: Chat -->
+        <div class="panel middle-panel">
+            <div class="tabs" id="tabs"></div>
+            <div class="chat-container">
+                <div class="messages" id="messages"></div>
+                
+                <div class="input-area">
+                    <div id="status" class="status" style="display: none;"></div>
+                    
+                    <!-- System Prompt is now here, per Tab -->
+                    <div class="input-group" style="margin-bottom: 8px;">
+                        <label>System Prompt (For this Tab)</label>
+                        <textarea id="systemPrompt" style="min-height: 40px; height: 40px;" placeholder="System prompt..."></textarea>
+                    </div>
+
+                    <div class="input-row">
+                        <textarea id="userInput" placeholder="Type your message..."></textarea>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="btnSend">Send</button>
+                            <button class="secondary" id="btnClear">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Tools & Options -->
+        <div class="panel right-panel">
+            <div class="panel-header">Tools & Options</div>
+            <div class="panel-content">
+                
+                <!-- Tool Management -->
+                <div class="input-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableTools">
+                        <label for="enableTools" style="display:inline;">Enable Tools</label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Tools JSON Definition (Edit Here)</label>
+                    <textarea id="toolsEditor" class="tool-json-input"></textarea>
+                    <div class="btn-group">
+                        <button class="secondary" id="btnResetTools">Reset to Default</button>
+                        <button class="secondary" id="btnFormatTools">Format JSON</button>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
+
+                <div class="btn-group" style="flex-direction: column;">
+                    <button class="secondary" onclick="document.getElementById('importFile').click()">Import Chat</button>
+                    <button class="secondary" id="btnExport">Export Chat</button>
+                </div>
+                <input type="file" id="importFile" accept=".json" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
