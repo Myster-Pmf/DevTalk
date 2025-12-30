@@ -146,14 +146,40 @@ button.danger:hover {
     margin-top: 12px;
 }
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #444;
+}
+
 /* Models List */
+.model-list {
+    margin-top: 16px;
+}
+
 .model-item {
-    padding: 10px;
+    padding: 12px;
     background: #2a2a2a;
     border-radius: 4px;
     margin-bottom: 8px;
     cursor: pointer;
     border: 2px solid transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .model-item.active {
@@ -172,6 +198,25 @@ button.danger:hover {
     word-break: break-all;
 }
 
+.icon-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.icon-btn:hover {
+    background: #3a3a3a;
+}
+
+.delete-model-btn:hover svg {
+    stroke: #ff4444;
+}
+
 /* Tabs - FIXED to be sticky */
 .tabs {
     display: flex;
@@ -183,6 +228,8 @@ button.danger:hover {
     flex-shrink: 0;
     /* Prevents shrinking */
     height: 45px;
+    white-space: nowrap;
+    /* Ensure they don't wrap */
 }
 
 .tab {
@@ -195,10 +242,10 @@ button.danger:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 0;
-    /* Allow shrinking */
-    flex: 1 1 auto;
-    /* Grow and shrink */
+    min-width: 120px;
+    /* Force min width to cause scrolling */
+    flex: 0 0 auto;
+    /* Do not shrink, do not grow overly aggressive (optional) */
     max-width: 200px;
     color: #ccc;
     position: relative;
@@ -395,4 +442,19 @@ button.danger:hover {
     grid-template-columns: 1fr 80px;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    min-height: 24px;
+    /* Ensure height for alignment */
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    /* Remove default margins */
 }

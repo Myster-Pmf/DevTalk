@@ -84,6 +84,12 @@
             <div class="panel-header">Tools & Options</div>
             <div class="panel-content">
 
+                <div class="input-group"
+                    style="margin-bottom: 16px; padding: 10px; background: #222; border-radius: 4px; text-align: center;">
+                    <label style="margin-bottom: 4px;">Total Token Usage (Tab)</label>
+                    <div id="tokenUsage" style="font-size: 16px; font-weight: bold; color: #4caf50;">0</div>
+                </div>
+
                 <!-- Tool Management -->
                 <div class="input-group">
                     <div class="checkbox-group">
@@ -99,6 +105,20 @@
                         <button class="secondary" id="btnResetTools">Reset to Default</button>
                         <button class="secondary" id="btnFormatTools">Format JSON</button>
                     </div>
+                </div>
+
+                <div class="input-group" style="margin-top: 16px;">
+                    <label>Tool Implementations (JavaScript)</label>
+                    <textarea id="toolCodeEditor" class="tool-json-input" placeholder="// Return an object with function names matching tool definitions
+return {
+    get_weather: (args) => {
+        return { 
+            location: args.location, 
+            temp: 22, 
+            condition: 'Sunny' 
+        };
+    }
+};"></textarea>
                 </div>
 
                 <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>

@@ -32,6 +32,31 @@ const DEFAULT_TOOLS = [
     }
 ];
 
+const DEFAULT_TOOL_CODE = `return {
+    get_weather: (args) => {
+        // Mock Weather Tool
+        const conditions = ['Sunny', 'Cloudy', 'Rainy', 'Snowy'];
+        const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+        return {
+            location: args.location,
+            temperature: Math.floor(Math.random() * 30) + 10,
+            unit: args.unit || 'celsius',
+            condition: randomCondition,
+            note: "This is a simulated response from the JavaScript editor!"
+        };
+    },
+    search_web: (args) => {
+        // Mock Search Tool
+        return {
+            query: args.query,
+            results: [
+                { title: "Search Result for " + args.query, snippet: "This is a dynamic simulated result from your JS code." },
+                { title: "Another Result", snippet: "You can modify this behavior in the editor." }
+            ]
+        };
+    }
+};`;
+
 // --- STATE ---
 let models = [];
 let activeModelIndex = null;
@@ -47,23 +72,31 @@ const els = {
     baseUrl: document.getElementById('baseUrl'),
     temperature: document.getElementById('temperature'),
     maxTokens: document.getElementById('maxTokens'),
-    systemPrompt: document.getElementById('systemPrompt'),
     userInput: document.getElementById('userInput'),
     modelList: document.getElementById('modelList'),
     tabs: document.getElementById('tabs'),
     messages: document.getElementById('messages'),
     status: document.getElementById('status'),
     toolsEditor: document.getElementById('toolsEditor'),
-    enableTools: document.getElementById('enableTools')
+    enableTools: document.getElementById('enableTools'),
+    // Note: systemPrompt is now looked up dynamically or by ID if consistent, but we use tab.systemPrompt mostly.
+    // Re-getting it here to be safe as we moved it.
+    systemPrompt: document.getElementById('systemPrompt')
 };
 
 // --- INITIALIZATION ---
 function init() {
     loadFromStorage();
-    
+
     // Set initial tool JSON in the editor
     if (!els.toolsEditor.value) {
         els.toolsEditor.value = JSON.stringify(currentTools, null, 2);
+    }
+
+    // Set initial tool CODE in the editor if empty
+    const codeEditor = document.getElementById('toolCodeEditor');
+    if (codeEditor && !codeEditor.value.trim()) {
+        codeEditor.value = DEFAULT_TOOL_CODE;
     }
 
     // Event Listeners
@@ -77,13 +110,14 @@ function init() {
     document.getElementById('btnFormatTools').onclick = formatTools;
     document.getElementById('importFile').onchange = importChat;
 
-    // Save System Prompt to TAB (not model) on input
-    els.systemPrompt.addEventListener('input', () => {
-        if (chatTabs[activeTabIndex]) {
-            chatTabs[activeTabIndex].systemPrompt = els.systemPrompt.value;
-            saveToStorage();
-        }
-    });
+    if (els.systemPrompt) {
+        els.systemPrompt.addEventListener('input', () => {
+            if (chatTabs[activeTabIndex]) {
+                chatTabs[activeTabIndex].systemPrompt = els.systemPrompt.value;
+                saveToStorage();
+            }
+        });
+    }
 
     // Enter to send
     els.userInput.addEventListener('keydown', (e) => {
@@ -97,9 +131,13 @@ function init() {
     if (chatTabs.length === 0) createNewTab();
     else {
         renderTabs();
-        switchTab(activeTabIndex); // Ensure correct tab data loads
+        // Fix for potential model desync on load
+        if (chatTabs[activeTabIndex].modelIndex !== null && models[chatTabs[activeTabIndex].modelIndex]) {
+            activeModelIndex = chatTabs[activeTabIndex].modelIndex;
+        }
+        switchTab(activeTabIndex);
     }
-    
+
     renderModels();
 }
 
@@ -114,9 +152,12 @@ function loadFromStorage() {
             activeModelIndex = data.activeModelIndex;
             chatTabs = data.chatTabs || [];
             activeTabIndex = data.activeTabIndex || 0;
-            if(data.tools) {
+            if (data.tools) {
                 currentTools = data.tools;
                 els.toolsEditor.value = JSON.stringify(currentTools, null, 2);
+            }
+            if (data.toolCode) {
+                document.getElementById('toolCodeEditor').value = data.toolCode;
             }
         } catch (e) { console.error("Storage Error", e); }
     }
@@ -126,14 +167,17 @@ function saveToStorage() {
     // Update tools from editor before saving state
     try {
         currentTools = JSON.parse(els.toolsEditor.value);
-    } catch(e) {}
+    } catch (e) { }
+
+    const toolCode = document.getElementById('toolCodeEditor').value;
 
     localStorage.setItem('chatPlayground_v3', JSON.stringify({
         models,
         activeModelIndex,
         chatTabs,
         activeTabIndex,
-        tools: currentTools
+        tools: currentTools,
+        toolCode: toolCode
     }));
 }
 
@@ -180,17 +224,17 @@ function updateModel() {
 }
 
 function deleteModel(index, e) {
-    if(e) e.stopPropagation();
+    if (e) e.stopPropagation();
     models.splice(index, 1);
     if (activeModelIndex === index) activeModelIndex = null;
     else if (activeModelIndex > index) activeModelIndex--;
-    
+
     // Remove model ref from tabs
-    chatTabs.forEach(t => { if(t.modelIndex === index) t.modelIndex = null; });
-    
+    chatTabs.forEach(t => { if (t.modelIndex === index) t.modelIndex = null; });
+
     saveToStorage();
     renderModels();
-    if(activeModelIndex !== null) loadModelToUI(models[activeModelIndex]);
+    if (activeModelIndex !== null) loadModelToUI(models[activeModelIndex]);
     else {
         els.apiKey.value = '';
         els.modelName.value = '';
@@ -212,9 +256,13 @@ function selectModel(index) {
 function renderModels() {
     els.modelList.innerHTML = models.map((m, i) => `
         <div class="model-item ${i === activeModelIndex ? 'active' : ''}" onclick="selectModel(${i})">
-            <div class="model-name">${m.name}</div>
-            <div class="model-url">${m.baseUrl}</div>
-            <button class="danger" style="margin-top:5px; padding:4px 8px; font-size:10px;" onclick="deleteModel(${i}, event)">Delete</button>
+            <div>
+                <div class="model-name">${escapeHtml(m.name)}</div>
+                <div class="model-url">${escapeHtml(m.baseUrl)}</div>
+            </div>
+            <button class="icon-btn delete-model-btn" onclick="deleteModel(${i}, event)" title="Delete Model">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cc3333" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
         </div>
     `).join('');
 }
@@ -222,11 +270,26 @@ function renderModels() {
 // --- TAB LOGIC ---
 
 function createNewTab() {
+    // Determine the best model to inherit
+    let inheritModelIndex = activeModelIndex;
+
+    // Validate the inherited index
+    if (inheritModelIndex !== null && !models[inheritModelIndex]) {
+        inheritModelIndex = null;
+    }
+
+    // If still null but models exist, maybe default to 0? 
+    // User asked "default selected", usually implies preserving state, or picking first if fresh.
+    if (inheritModelIndex === null && models.length > 0) {
+        inheritModelIndex = 0;
+    }
+
     chatTabs.push({
         id: Date.now(),
         messages: [],
-        modelIndex: activeModelIndex,
-        systemPrompt: "You are a helpful assistant." // Default per tab
+        modelIndex: inheritModelIndex,
+        systemPrompt: "You are a helpful assistant.",
+        tokenUsage: 0
     });
     activeTabIndex = chatTabs.length - 1;
     saveToStorage();
@@ -237,17 +300,28 @@ function createNewTab() {
 function switchTab(index) {
     activeTabIndex = index;
     const tab = chatTabs[index];
-    
+
     // 1. Load System Prompt specific to this tab
-    els.systemPrompt.value = tab.systemPrompt || '';
-    
-    // 2. If tab has a model associated, load it into UI
+    if (els.systemPrompt) els.systemPrompt.value = tab.systemPrompt || '';
+
+    // 2. Sync Model UI
+    // Fix: Always update activeModelIndex to match the tab, even if null
     if (tab.modelIndex !== null && models[tab.modelIndex]) {
         activeModelIndex = tab.modelIndex;
         loadModelToUI(models[tab.modelIndex]);
-        renderModels(); // Update active highlight
+    } else {
+        // Tab has no valid model, deselect
+        activeModelIndex = null;
+        // Optionally clear inputs or keep last viewed? User said "it says to select a model", so deselect is correct.
     }
-    
+    renderModels(); // Always re-render to reflect selection state
+
+    // 3. Update Token Usage Display
+    const tokenDisplay = document.getElementById('tokenUsage');
+    if (tokenDisplay) {
+        tokenDisplay.textContent = tab.tokenUsage || 0;
+    }
+
     renderTabs();
     renderMessages();
 }
@@ -255,10 +329,10 @@ function switchTab(index) {
 function closeTab(index, e) {
     e.stopPropagation();
     if (chatTabs.length <= 1) return; // Keep at least one
-    
+
     chatTabs.splice(index, 1);
     if (activeTabIndex >= chatTabs.length) activeTabIndex = chatTabs.length - 1;
-    
+
     saveToStorage();
     switchTab(activeTabIndex);
 }
@@ -266,13 +340,13 @@ function closeTab(index, e) {
 function renderTabs() {
     els.tabs.innerHTML = chatTabs.map((tab, i) => {
         // Safe check for model existence
-        const mName = (tab.modelIndex !== null && models[tab.modelIndex]) 
-            ? models[tab.modelIndex].name 
+        const mName = (tab.modelIndex !== null && models[tab.modelIndex])
+            ? models[tab.modelIndex].name
             : 'No Model';
-            
+
         return `
             <div class="tab ${i === activeTabIndex ? 'active' : ''}" onclick="switchTab(${i})">
-                <span>Tab ${i+1}: ${mName.substring(0, 15)}...</span>
+                <span>Tab ${i + 1}: ${mName.substring(0, 15)}...</span>
                 <span class="tab-close" onclick="closeTab(${i}, event)">×</span>
             </div>
         `;
@@ -293,16 +367,16 @@ function normalizeUrl(baseUrl) {
 async function sendMessage() {
     const tab = chatTabs[activeTabIndex];
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
-    
+
     const content = els.userInput.value.trim();
     if (!content) return;
 
     // Get current model settings
     const model = models[tab.modelIndex];
-    
+
     // Check if user changed input key without saving
-    if(els.apiKey.value.trim() !== model.apiKey) {
-        if(confirm("API Key in input differs from saved model. Update model?")) {
+    if (els.apiKey.value.trim() !== model.apiKey) {
+        if (confirm("API Key in input differs from saved model. Update model?")) {
             updateModel();
         } else { return; }
     }
@@ -331,7 +405,7 @@ async function sendMessage() {
             const toolsJson = JSON.parse(els.toolsEditor.value);
             requestBody.tools = toolsJson;
             requestBody.tool_choice = "auto";
-        } catch(e) {
+        } catch (e) {
             showStatus('Error in Tools JSON', 'error');
             return;
         }
@@ -361,6 +435,13 @@ async function sendMessage() {
         const assistantMessage = data.choices[0].message;
 
         // 4. Handle Response & Tools
+        const usage = data.usage;
+        if (usage && usage.total_tokens) {
+            tab.tokenUsage = (tab.tokenUsage || 0) + usage.total_tokens;
+            const tokenDisplay = document.getElementById('tokenUsage');
+            if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
+        }
+
         if (assistantMessage.tool_calls) {
             tab.messages.push({
                 role: 'assistant',
@@ -383,7 +464,7 @@ async function sendMessage() {
             saveToStorage();
             renderMessages();
             hideStatus();
-            
+
         } else {
             tab.messages.push({
                 role: 'assistant',
@@ -405,11 +486,33 @@ function simulateTool(toolCall) {
     let params = {};
     try {
         params = JSON.parse(args);
-    } catch(e) {
+    } catch (e) {
         return { error: "Failed to parse arguments" };
     }
 
-    // Add logic here for your tools
+    // 1. Get User Defined Tools
+    const userCode = document.getElementById('toolCodeEditor').value;
+    if (userCode) {
+        try {
+            // Create a function that executes the user's code
+            // The user's code should RETURN an object of functions
+            const createToolsIterator = new Function(userCode);
+            const userTools = createToolsIterator();
+
+            if (userTools && typeof userTools[name] === 'function') {
+                try {
+                    return userTools[name](params);
+                } catch (err) {
+                    return { error: `Execution Error in ${name}: ${err.message}` };
+                }
+            }
+        } catch (e) {
+            console.error("Error parsing user tool code", e);
+            return { error: `Syntax Error in Tool Code: ${e.message}` };
+        }
+    }
+
+    // 2. Default Simulator Fallback
     if (name === 'get_weather') {
         return {
             location: params.location,
@@ -418,7 +521,6 @@ function simulateTool(toolCall) {
             condition: 'Sunny'
         };
     } else if (name === 'search_web') {
-        // Returning dummy search results
         return {
             query: params.query,
             results: [
@@ -426,8 +528,8 @@ function simulateTool(toolCall) {
             ]
         };
     }
-    
-    return { error: `Tool ${name} not implemented in simulator` };
+
+    return { error: `Tool ${name} not implemented in simulator. Add implementation in the right panel.` };
 }
 
 // --- UTILS & UI HELPERS ---
@@ -439,12 +541,12 @@ function renderMessages() {
         let isTool = msg.role === 'tool';
         let isAssistant = msg.role === 'assistant';
         let isUser = msg.role === 'user';
-        
+
         // Handle Tool Calls Display
         if (msg.tool_calls) {
-             contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
+            contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
         }
-        
+
         // Handle Content
         if (msg.content) {
             // For editable content, we don't escape HTML in the attribute but we do for display if NOT editing.
@@ -454,7 +556,7 @@ function renderMessages() {
         }
 
         if (isTool) {
-             contentDisplay = `<div class="tool-output">${escapeHtml(msg.content)}</div>`;
+            contentDisplay = `<div class="tool-output">${escapeHtml(msg.content)}</div>`;
         }
 
         // Icons
@@ -468,7 +570,7 @@ function renderMessages() {
         // I'll use a Trash Icon.
 
         const roleDisplay = msg.role.toUpperCase();
-        
+
         // Editable: only User and Assistant text content (not tool outputs usually)
         const isEditable = !isTool;
 
@@ -488,7 +590,7 @@ function renderMessages() {
             </div>
         `;
     }).join('');
-    
+
     // Auto scroll
     els.messages.scrollTop = els.messages.scrollHeight;
 }
@@ -520,7 +622,7 @@ function deleteMessage(index) {
 }
 
 function clearChat() {
-    if(confirm("Clear this chat history?")) {
+    if (confirm("Clear this chat history?")) {
         chatTabs[activeTabIndex].messages = [];
         saveToStorage();
         renderMessages();
@@ -540,13 +642,20 @@ function toggleApiKey() {
 function resetTools() {
     currentTools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
     els.toolsEditor.value = JSON.stringify(currentTools, null, 2);
+
+    const codeEditor = document.getElementById('toolCodeEditor');
+    if (codeEditor) codeEditor.value = DEFAULT_TOOL_CODE;
+
+    saveToStorage();
+    showStatus('Tools Resetted', '');
+    setTimeout(hideStatus, 2000);
 }
 
 function formatTools() {
     try {
         const parsed = JSON.parse(els.toolsEditor.value);
         els.toolsEditor.value = JSON.stringify(parsed, null, 2);
-    } catch(e) {
+    } catch (e) {
         showStatus('Invalid JSON', 'error');
     }
 }
@@ -571,12 +680,12 @@ function importChat(event) {
             const data = JSON.parse(e.target.result);
             if (data.messages) {
                 chatTabs[activeTabIndex].messages = data.messages;
-                if(data.systemPrompt) chatTabs[activeTabIndex].systemPrompt = data.systemPrompt;
+                if (data.systemPrompt) chatTabs[activeTabIndex].systemPrompt = data.systemPrompt;
                 saveToStorage();
                 renderMessages();
                 switchTab(activeTabIndex); // Update prompts
             }
-        } catch(err) { showStatus('Import failed', 'error'); }
+        } catch (err) { showStatus('Import failed', 'error'); }
     };
     reader.readAsText(file);
     event.target.value = '';
