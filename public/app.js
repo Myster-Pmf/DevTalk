@@ -436,34 +436,80 @@ function renderMessages() {
     const messages = chatTabs[activeTabIndex]?.messages || [];
     els.messages.innerHTML = messages.map((msg, i) => {
         let contentDisplay = '';
+        let isTool = msg.role === 'tool';
+        let isAssistant = msg.role === 'assistant';
+        let isUser = msg.role === 'user';
         
+        // Handle Tool Calls Display
         if (msg.tool_calls) {
-            contentDisplay += `<div style="color:#aaa; font-size:0.9em; margin-bottom:5px;">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
+             contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
         }
         
+        // Handle Content
         if (msg.content) {
+            // For editable content, we don't escape HTML in the attribute but we do for display if NOT editing.
+            // However, contenteditable works with innerText/innerHTML. 
+            // We'll trust escapeHtml for the initial render.
             contentDisplay += escapeHtml(msg.content);
         }
 
-        if (msg.role === 'tool') {
-             contentDisplay = `<div style="color:#888; font-family:monospace; font-size:0.85em;">${escapeHtml(msg.content)}</div>`;
+        if (isTool) {
+             contentDisplay = `<div class="tool-output">${escapeHtml(msg.content)}</div>`;
         }
+
+        // Icons
+        const editIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+        const deleteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        const minusIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>`;
+
+        // User requested "delete icon instead of minus", but the image showed a minus-circle.
+        // I will use a trash icon as it is more standard for "delete", or the minus circle if they strictly want "image like" but "delete icon" implies trash.
+        // The prompt says "use delete icon instead of minus", implying the OLD one was minus (or text) and they want a delete icon.
+        // I'll use a Trash Icon.
+
+        const roleDisplay = msg.role.toUpperCase();
+        
+        // Editable: only User and Assistant text content (not tool outputs usually)
+        const isEditable = !isTool;
 
         return `
             <div class="message">
-                <div class="message-role ${msg.role}">${msg.role}</div>
-                <div class="message-content">
-                    <div class="message-text">${contentDisplay}</div>
+                <div class="message-header">
+                    <span class="message-role">${roleDisplay}</span>
                     <div class="message-actions">
-                         <button class="danger" style="padding:2px 6px; font-size:10px;" onclick="deleteMessage(${i})">Del</button>
+                         ${isEditable ? `<button class="action-btn" title="Edit" onclick="focusMessage(${i})">${editIcon}</button>` : ''}
+                         <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
                     </div>
                 </div>
+                <div class="message-content" 
+                     id="msg-${i}"
+                     ${isEditable ? 'contenteditable="true"' : ''} 
+                     onblur="updateMessageContent(${i}, this.innerText)">${contentDisplay}</div>
             </div>
         `;
     }).join('');
     
     // Auto scroll
     els.messages.scrollTop = els.messages.scrollHeight;
+}
+
+function focusMessage(index) {
+    const el = document.getElementById(`msg-${index}`);
+    if (el) {
+        el.focus();
+        // Move cursor to end (optional, simple focus is often enough)
+    }
+}
+
+function updateMessageContent(index, newContent) {
+    const messages = chatTabs[activeTabIndex].messages;
+    if (messages[index]) {
+        if (messages[index].content !== newContent) {
+            messages[index].content = newContent;
+            saveToStorage();
+            // Optional: visual feedback
+        }
+    }
 }
 
 function deleteMessage(index) {

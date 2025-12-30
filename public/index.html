@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Model Playground</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <!-- Left Panel: Model Configuration -->
@@ -41,6 +43,13 @@
                     </div>
                 </div>
 
+                <div class="input-group">
+                    <label>System Prompt (For this Tab)</label>
+                    <textarea id="systemPrompt" style="min-height: 80px;" placeholder="System prompt..."></textarea>
+                </div>
+
+                <div class="div-line" style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
+
                 <div class="btn-group">
                     <button id="btnAddModel">Add Model</button>
                     <button class="secondary" id="btnUpdateModel">Update</button>
@@ -55,15 +64,9 @@
             <div class="tabs" id="tabs"></div>
             <div class="chat-container">
                 <div class="messages" id="messages"></div>
-                
+
                 <div class="input-area">
                     <div id="status" class="status" style="display: none;"></div>
-                    
-                    <!-- System Prompt is now here, per Tab -->
-                    <div class="input-group" style="margin-bottom: 8px;">
-                        <label>System Prompt (For this Tab)</label>
-                        <textarea id="systemPrompt" style="min-height: 40px; height: 40px;" placeholder="System prompt..."></textarea>
-                    </div>
 
                     <div class="input-row">
                         <textarea id="userInput" placeholder="Type your message..."></textarea>
@@ -80,7 +83,7 @@
         <div class="panel right-panel">
             <div class="panel-header">Tools & Options</div>
             <div class="panel-content">
-                
+
                 <!-- Tool Management -->
                 <div class="input-group">
                     <div class="checkbox-group">
@@ -101,7 +104,8 @@
                 <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
 
                 <div class="btn-group" style="flex-direction: column;">
-                    <button class="secondary" onclick="document.getElementById('importFile').click()">Import Chat</button>
+                    <button class="secondary" onclick="document.getElementById('importFile').click()">Import
+                        Chat</button>
                     <button class="secondary" id="btnExport">Export Chat</button>
                 </div>
                 <input type="file" id="importFile" accept=".json" style="display: none;">
@@ -111,4 +115,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
