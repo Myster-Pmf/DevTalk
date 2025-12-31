@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Model Playground</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Markdown & Highlight Support -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 
 <body>
@@ -119,6 +124,24 @@ return {
         };
     }
 };"></textarea>
+                </div>
+
+                <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
+
+                <!-- Code Generator -->
+                <div class="input-group">
+                    <label>Generate Code</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <select id="codeGenLang">
+                            <option value="curl">cURL</option>
+                            <option value="python">Python (requests)</option>
+                            <option value="js">Node.js (fetch)</option>
+                        </select>
+                    </div>
+                    <textarea id="codeOutput" class="tool-json-input" style="height: 150px;" readonly
+                        placeholder="Generated code will appear here..."></textarea>
+                    <button class="secondary" id="btnCopyGenCode" style="width: 100%; margin-top: 4px;">Copy
+                        Code</button>
                 </div>
 
                 <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>

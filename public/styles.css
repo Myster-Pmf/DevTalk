@@ -217,6 +217,53 @@ button.danger:hover {
     stroke: #ff4444;
 }
 
+/* Code Blocks in Chat */
+.message-content pre {
+    background: #111;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+    position: relative;
+}
+
+.message-content code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 13px;
+}
+
+/* Copy Code Button */
+.copy-code-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #444;
+    color: #ccc;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.copy-code-btn:hover {
+    background: #666;
+    opacity: 1;
+}
+
+/* Tab Renaming Input */
+.tab-edit-input {
+    background: #111;
+    border: 1px solid #444;
+    color: white;
+    padding: 2px 4px;
+    font-size: inherit;
+    font-family: inherit;
+    border-radius: 2px;
+    width: 100px;
+}
+
 /* Tabs - FIXED to be sticky */
 .tabs {
     display: flex;

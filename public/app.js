@@ -139,6 +139,23 @@ function init() {
     }
 
     renderModels();
+
+    // Code Generator Events
+    document.getElementById('codeGenLang').onchange = updateGeneratedCode;
+    document.getElementById('toolCodeEditor').addEventListener('input', updateGeneratedCode);
+    els.toolsEditor.addEventListener('input', updateGeneratedCode);
+    els.enableTools.onchange = updateGeneratedCode;
+
+    document.getElementById('btnCopyGenCode').onclick = () => {
+        const output = document.getElementById('codeOutput');
+        output.select();
+        document.execCommand('copy');
+        showStatus('Copied to clipboard!', '');
+        setTimeout(hideStatus, 2000);
+    };
+
+    // Initial code gen
+    updateGeneratedCode();
 }
 
 // --- STATE MANAGEMENT ---
@@ -219,6 +236,7 @@ function updateModel() {
     saveToStorage();
     renderModels();
     renderTabs(); // Refresh names on tabs
+    updateGeneratedCode(); // NEW: update on model change
     showStatus('Model Updated', '');
     setTimeout(hideStatus, 2000);
 }
@@ -251,6 +269,7 @@ function selectModel(index) {
     saveToStorage();
     renderModels();
     renderTabs();
+    updateGeneratedCode(); // NEW: update on select
 }
 
 function renderModels() {
@@ -305,16 +324,13 @@ function switchTab(index) {
     if (els.systemPrompt) els.systemPrompt.value = tab.systemPrompt || '';
 
     // 2. Sync Model UI
-    // Fix: Always update activeModelIndex to match the tab, even if null
     if (tab.modelIndex !== null && models[tab.modelIndex]) {
         activeModelIndex = tab.modelIndex;
         loadModelToUI(models[tab.modelIndex]);
     } else {
-        // Tab has no valid model, deselect
         activeModelIndex = null;
-        // Optionally clear inputs or keep last viewed? User said "it says to select a model", so deselect is correct.
     }
-    renderModels(); // Always re-render to reflect selection state
+    renderModels();
 
     // 3. Update Token Usage Display
     const tokenDisplay = document.getElementById('tokenUsage');
@@ -324,6 +340,7 @@ function switchTab(index) {
 
     renderTabs();
     renderMessages();
+    updateGeneratedCode(); // NEW: update on tab switch
 }
 
 function closeTab(index, e) {
@@ -337,6 +354,38 @@ function closeTab(index, e) {
     switchTab(activeTabIndex);
 }
 
+function startRenameTab(index, e) {
+    e.preventDefault(); // Prevent context menu
+    const tabEl = e.currentTarget;
+    const nameSpan = tabEl.querySelector('.tab-name-span');
+    if (!nameSpan) return;
+
+    const currentName = chatTabs[index].customName || `Tab ${index + 1}`;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = currentName;
+    input.className = 'tab-edit-input';
+
+    input.onblur = () => finishRenameTab(index, input.value);
+    input.onkeydown = (ev) => {
+        if (ev.key === 'Enter') finishRenameTab(index, input.value);
+        e.stopPropagation();
+    };
+
+    nameSpan.style.display = 'none';
+    nameSpan.parentNode.insertBefore(input, nameSpan);
+    input.focus();
+}
+
+function finishRenameTab(index, newName) {
+    if (newName && newName.trim()) {
+        chatTabs[index].customName = newName.trim();
+    }
+    saveToStorage();
+    renderTabs();
+}
+
 function renderTabs() {
     els.tabs.innerHTML = chatTabs.map((tab, i) => {
         // Safe check for model existence
@@ -344,9 +393,15 @@ function renderTabs() {
             ? models[tab.modelIndex].name
             : 'No Model';
 
+        // Use custom name if exists, else generic
+        const displayName = tab.customName || `Tab ${i + 1}: ${mName.substring(0, 15)}...`;
+
+        // We attach contextmenu event dynamically or inline
         return `
-            <div class="tab ${i === activeTabIndex ? 'active' : ''}" onclick="switchTab(${i})">
-                <span>Tab ${i + 1}: ${mName.substring(0, 15)}...</span>
+            <div class="tab ${i === activeTabIndex ? 'active' : ''}"
+                 onclick="switchTab(${i})"
+                 oncontextmenu="startRenameTab(${i}, event)">
+                <span class="tab-name-span">${escapeHtml(displayName)}</span>
                 <span class="tab-close" onclick="closeTab(${i}, event)">×</span>
             </div>
         `;
@@ -539,7 +594,6 @@ function renderMessages() {
     els.messages.innerHTML = messages.map((msg, i) => {
         let contentDisplay = '';
         let isTool = msg.role === 'tool';
-        let isAssistant = msg.role === 'assistant';
         let isUser = msg.role === 'user';
 
         // Handle Tool Calls Display
@@ -549,10 +603,12 @@ function renderMessages() {
 
         // Handle Content
         if (msg.content) {
-            // For editable content, we don't escape HTML in the attribute but we do for display if NOT editing.
-            // However, contenteditable works with innerText/innerHTML. 
-            // We'll trust escapeHtml for the initial render.
-            contentDisplay += escapeHtml(msg.content);
+            // Use MARKED for parsing
+            if (typeof marked !== 'undefined') {
+                contentDisplay += marked.parse(msg.content);
+            } else {
+                contentDisplay += escapeHtml(msg.content);
+            }
         }
 
         if (isTool) {
@@ -562,16 +618,10 @@ function renderMessages() {
         // Icons
         const editIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
         const deleteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-        const minusIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>`;
-
-        // User requested "delete icon instead of minus", but the image showed a minus-circle.
-        // I will use a trash icon as it is more standard for "delete", or the minus circle if they strictly want "image like" but "delete icon" implies trash.
-        // The prompt says "use delete icon instead of minus", implying the OLD one was minus (or text) and they want a delete icon.
-        // I'll use a Trash Icon.
 
         const roleDisplay = msg.role.toUpperCase();
 
-        // Editable: only User and Assistant text content (not tool outputs usually)
+        // Editable: only User text content (not tool outputs or assistant content parsed by marked)
         const isEditable = !isTool;
 
         return `
@@ -583,16 +633,128 @@ function renderMessages() {
                          <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
                     </div>
                 </div>
-                <div class="message-content" 
+                <div class="message-content"
                      id="msg-${i}"
-                     ${isEditable ? 'contenteditable="true"' : ''} 
+                     ${isEditable && isUser ? 'contenteditable="true"' : ''}
                      onblur="updateMessageContent(${i}, this.innerText)">${contentDisplay}</div>
             </div>
         `;
     }).join('');
 
+    // Post-process for HighlightJS and Copy Buttons
+    document.querySelectorAll('.message-content pre code').forEach((block) => {
+        if (typeof hljs !== 'undefined') hljs.highlightElement(block);
+
+        // Add Copy Button
+        const pre = block.parentElement;
+        if (!pre.querySelector('.copy-code-btn')) {
+            const btn = document.createElement('button');
+            btn.className = 'copy-code-btn';
+            btn.textContent = 'Copy';
+            btn.onclick = () => {
+                navigator.clipboard.writeText(block.innerText);
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 2000);
+            };
+            pre.appendChild(btn);
+        }
+    });
+
     // Auto scroll
     els.messages.scrollTop = els.messages.scrollHeight;
+}
+
+
+// --- CODE GENERATION ---
+
+function updateGeneratedCode() {
+    const outputEl = document.getElementById('codeOutput');
+    if (!outputEl) return;
+
+    const lang = document.getElementById('codeGenLang').value;
+    const tab = chatTabs[activeTabIndex];
+    if (!tab) return outputEl.value = "No active tab";
+
+    const model = models[tab.modelIndex];
+    if (!model) return outputEl.value = "Select a model to see code example";
+
+    const fullUrl = normalizeUrl(model.baseUrl);
+    const apiKey = model.apiKey.trim();
+
+    // Prepare messages correctly (system + history)
+    const apiMessages = [];
+    if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
+    if (tab.messages) {
+        tab.messages.forEach(m => {
+            // Include user and assistant messages, and tool messages
+            if (m.role === 'user' || m.role === 'assistant' || m.role === 'system' || m.role === 'tool') {
+                const cleanMsg = { role: m.role, content: m.content || "" };
+                if (m.tool_calls) cleanMsg.tool_calls = m.tool_calls;
+                if (m.tool_call_id) cleanMsg.tool_call_id = m.tool_call_id;
+                apiMessages.push(cleanMsg);
+            }
+        });
+    }
+
+    // Prepare Tools
+    let tools = null;
+    if (els.enableTools.checked) {
+        try {
+            tools = JSON.parse(els.toolsEditor.value);
+        } catch (e) { }
+    }
+
+    const payload = {
+        model: model.name,
+        messages: apiMessages,
+        temperature: model.temperature,
+        max_tokens: model.maxTokens
+    };
+    if (tools) {
+        payload.tools = tools;
+        payload.tool_choice = "auto";
+    }
+
+    let code = '';
+    if (lang === 'curl') {
+        const headerAuth = apiKey ? `-H "Authorization: Bearer ${apiKey}"` : '';
+        code = `curl ${fullUrl} \\
+  -H "Content-Type: application/json" \\
+  ${headerAuth} \\
+  -d '${JSON.stringify(payload, null, 2)}'`;
+
+    } else if (lang === 'python') {
+        code = `import requests
+import json
+
+url = "${fullUrl}"
+headers = {
+    "Content-Type": "application/json"
+    ${apiKey ? `, "Authorization": "Bearer ${apiKey}"` : ''}
+}
+payload = ${JSON.stringify(payload, null, 4)}
+
+response = requests.post(url, headers=headers, json=payload)
+print(response.json())`;
+
+    } else if (lang === 'js') {
+        code = `const url = "${fullUrl}";
+const payload = ${JSON.stringify(payload, null, 2)};
+
+fetch(url, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+        ${apiKey ? `, 'Authorization': 'Bearer ${apiKey}'` : ''}
+    },
+    body: JSON.stringify(payload)
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));`;
+    }
+
+    outputEl.value = code;
 }
 
 function focusMessage(index) {
@@ -661,11 +823,21 @@ function formatTools() {
 }
 
 function exportChat() {
-    const tab = chatTabs[activeTabIndex];
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tab, null, 2));
+    const exportData = {
+        version: "v3",
+        date: new Date().toISOString(),
+        models: models,
+        activeModelIndex: activeModelIndex,
+        chatTabs: chatTabs,
+        activeTabIndex: activeTabIndex,
+        tools: currentTools,
+        toolCode: document.getElementById('toolCodeEditor').value
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "chat_export_" + Date.now() + ".json");
+    downloadAnchorNode.setAttribute("download", "playground_full_export_" + Date.now() + ".json");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -678,14 +850,36 @@ function importChat(event) {
     reader.onload = (e) => {
         try {
             const data = JSON.parse(e.target.result);
-            if (data.messages) {
+
+            // Handle Full App Export (v3)
+            if (data.chatTabs) {
+                models = data.models || [];
+                activeModelIndex = data.activeModelIndex;
+                chatTabs = data.chatTabs || [];
+                activeTabIndex = data.activeTabIndex || 0;
+                if (data.tools) {
+                    currentTools = data.tools;
+                    els.toolsEditor.value = JSON.stringify(currentTools, null, 2);
+                }
+                if (data.toolCode) {
+                    document.getElementById('toolCodeEditor').value = data.toolCode;
+                }
+            }
+            // Handle Legacy Tab-only Export
+            else if (data.messages) {
                 chatTabs[activeTabIndex].messages = data.messages;
                 if (data.systemPrompt) chatTabs[activeTabIndex].systemPrompt = data.systemPrompt;
-                saveToStorage();
-                renderMessages();
-                switchTab(activeTabIndex); // Update prompts
             }
-        } catch (err) { showStatus('Import failed', 'error'); }
+
+            saveToStorage();
+            init(); // Re-initialize events and UI
+            showStatus('Import Successful', '');
+            setTimeout(hideStatus, 2000);
+
+        } catch (err) {
+            console.error(err);
+            showStatus('Import failed', 'error');
+        }
     };
     reader.readAsText(file);
     event.target.value = '';
