@@ -119,6 +119,11 @@ function init() {
     document.getElementById('btnFormatTools').onclick = formatTools;
     document.getElementById('importFile').onchange = importChat;
 
+    // Model Export/Import
+    document.getElementById('btnExportModels').onclick = exportModels;
+    document.getElementById('btnImportModels').onclick = () => document.getElementById('importModelsFile').click();
+    document.getElementById('importModelsFile').onchange = handleModelImport;
+
     // Modal Events
     document.getElementById('modalBtnCancel').onclick = closeModal;
     document.getElementById('modalBtnConfirm').onclick = () => {
@@ -347,6 +352,77 @@ function renderModels() {
             </button>
         </div>
     `).join('');
+}
+
+// --- MODEL IMPORT / EXPORT ---
+
+function exportModels() {
+    if (models.length === 0) return showStatus('No models to export', 'error');
+
+    const data = JSON.stringify(models, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `models_export_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('Models exported', '');
+    setTimeout(hideStatus, 2000);
+}
+
+function handleModelImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const importedModels = JSON.parse(event.target.result);
+            if (!Array.isArray(importedModels)) {
+                throw new Error("Invalid format: expected an array of models.");
+            }
+            importModels(importedModels);
+        } catch (err) {
+            showStatus('Import Error: ' + err.message, 'error');
+        }
+        e.target.value = ''; // Reset file input
+    };
+    reader.readAsText(file);
+}
+
+function importModels(newModels) {
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    newModels.forEach(newM => {
+        // Smart check: Avoid duplicate if name AND apiKey match exactly
+        const isDuplicate = models.some(existing =>
+            existing.name === newM.name &&
+            existing.apiKey === newM.apiKey
+        );
+
+        if (!isDuplicate) {
+            // Basic validation: ensure it has a name
+            if (newM.name) {
+                models.push(newM);
+                addedCount++;
+            } else {
+                skippedCount++;
+            }
+        } else {
+            skippedCount++;
+        }
+    });
+
+    if (addedCount > 0) {
+        saveToStorage();
+        renderModels();
+        showStatus(`Imported ${addedCount} models. Skipped ${skippedCount}.`, '');
+    } else {
+        showStatus(`No new models added. Skipped ${skippedCount} duplicates/invalid.`, 'error');
+    }
+    setTimeout(hideStatus, 3000);
 }
 
 // --- TAB LOGIC ---
