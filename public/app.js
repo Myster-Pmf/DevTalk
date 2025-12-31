@@ -103,12 +103,28 @@ function init() {
     document.getElementById('btnAddModel').onclick = saveModel;
     document.getElementById('btnUpdateModel').onclick = updateModel;
     document.getElementById('btnSend').onclick = sendMessage;
-    document.getElementById('btnClear').onclick = clearChat;
+    document.getElementById('btnClear').onclick = () => {
+        showConfirmModal(
+            "Clear Chat History?",
+            "This will delete all messages in this tab and reset token usage.",
+            "Clear",
+            () => {
+                clearChat();
+            }
+        );
+    };
     document.getElementById('btnExport').onclick = exportChat;
     document.getElementById('toggleApiKey').onclick = toggleApiKey;
     document.getElementById('btnResetTools').onclick = resetTools;
     document.getElementById('btnFormatTools').onclick = formatTools;
     document.getElementById('importFile').onchange = importChat;
+
+    // Modal Events
+    document.getElementById('modalBtnCancel').onclick = closeModal;
+    document.getElementById('modalBtnConfirm').onclick = () => {
+        if (modalConfirmCallback) modalConfirmCallback();
+        closeModal();
+    };
 
     if (els.systemPrompt) {
         els.systemPrompt.addEventListener('input', () => {
@@ -466,28 +482,32 @@ function normalizeUrl(baseUrl) {
     return cleaned;
 }
 
-async function sendMessage() {
+async function sendMessage(isRegen = false) {
     const tab = chatTabs[activeTabIndex];
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
 
-    const content = els.userInput.value.trim();
-    if (!content) return;
+    // 1. Add User Message to UI (Skip if regenerating)
+    if (!isRegen) {
+        const content = els.userInput.value.trim();
+        // Allow empty if intended, though usually users want some text. 
+        // User explicitly asked to allow empty.
+        tab.messages.push({ role: 'user', content });
+        els.userInput.value = '';
+        renderMessages();
+        updateGeneratedCode();
+    }
 
     // Get current model settings
     const model = models[tab.modelIndex];
 
     // Check if user changed input key without saving
     if (els.apiKey.value.trim() !== model.apiKey) {
-        if (confirm("API Key in input differs from saved model. Update model?")) {
-            updateModel();
-        } else { return; }
+        if (!isRegen) { // Only prompt if this is a fresh send
+            if (confirm("API Key in input differs from saved model. Update model?")) {
+                updateModel();
+            } else { return; }
+        }
     }
-
-    // 1. Add User Message to UI
-    tab.messages.push({ role: 'user', content });
-    els.userInput.value = '';
-    renderMessages();
-    updateGeneratedCode();
     showStatus('Sending...', 'loading');
 
     // 2. Prepare Payload
@@ -676,17 +696,19 @@ function renderMessages() {
         // Icons
         const editIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
         const deleteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+        const copyIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+        const regenIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l5.64 5.64A9 9 0 0 0 20.49 15"></path></svg>`;
 
         const roleDisplay = msg.role.toUpperCase();
-
-        // Editable: User requested ALL messages be editable directly
-        const isEditable = true;
+        const isAssistant = msg.role === 'assistant';
 
         return `
             <div class="message">
                 <div class="message-header">
                     <span class="message-role">${roleDisplay}</span>
                     <div class="message-actions">
+                         <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
+                         ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
                          <button class="action-btn" title="Edit" onclick="focusMessage(${i})">${editIcon}</button>
                          <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
                     </div>
@@ -843,11 +865,54 @@ function deleteMessage(index) {
 }
 
 function clearChat() {
-    if (confirm("Clear this chat history?")) {
-        chatTabs[activeTabIndex].messages = [];
-        saveToStorage();
-        renderMessages();
+    chatTabs[activeTabIndex].messages = [];
+    chatTabs[activeTabIndex].tokenUsage = 0;
+    const tokenDisplay = document.getElementById('tokenUsage');
+    if (tokenDisplay) tokenDisplay.textContent = 0;
+    saveToStorage();
+    renderMessages();
+}
+
+// --- MODAL LOGIC ---
+let modalConfirmCallback = null;
+
+function showConfirmModal(title, message, confirmText, callback) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMessage').textContent = message;
+    const confirmBtn = document.getElementById('modalBtnConfirm');
+    confirmBtn.textContent = confirmText;
+    modalConfirmCallback = callback;
+    document.getElementById('confirmModal').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('confirmModal').classList.remove('open');
+    modalConfirmCallback = null;
+}
+
+// --- MESSAGE ACTIONS ---
+function copyMessage(index) {
+    const msg = chatTabs[activeTabIndex].messages[index];
+    if (msg) {
+        navigator.clipboard.writeText(msg.content);
+        showStatus('Message copied!', '');
+        setTimeout(hideStatus, 2000);
     }
+}
+
+function regenerateMessage(index) {
+    const tab = chatTabs[activeTabIndex];
+    if (!tab) return;
+
+    // Remove the current assistant message and any subsequent tool messages
+    // Actually, usually we regenerate from the last user message.
+    // Let's truncate the history up to this point (excluding this assistant message) and trigger sendMessage.
+
+    // If it's the last message, just pop it and send again.
+    // If it's in the middle, we truncate.
+    tab.messages = tab.messages.slice(0, index);
+    renderMessages();
+    sendMessage(true);
 }
 
 function toggleApiKey() {
