@@ -470,7 +470,7 @@ async function sendMessage() {
 
     try {
         // --- PROXY REQUEST ---
-        // We send the request to OUR /api/proxy endpoint
+        // --- PROXY REQUEST ---
         const response = await fetch('/api/proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -481,7 +481,15 @@ async function sendMessage() {
             })
         });
 
-        const data = await response.json();
+        // Get the response text first to handle non-JSON errors
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            // Server returned non-JSON (like "Internal Server Error" string)
+            throw new Error(responseText || `HTTP ${response.status}`);
+        }
 
         if (!response.ok) {
             throw new Error(data.error || `HTTP ${response.status}`);
@@ -621,21 +629,21 @@ function renderMessages() {
 
         const roleDisplay = msg.role.toUpperCase();
 
-        // Editable: only User text content (not tool outputs or assistant content parsed by marked)
-        const isEditable = !isTool;
+        // Editable: User requested ALL messages be editable directly
+        const isEditable = true;
 
         return `
             <div class="message">
                 <div class="message-header">
                     <span class="message-role">${roleDisplay}</span>
                     <div class="message-actions">
-                         ${isEditable ? `<button class="action-btn" title="Edit" onclick="focusMessage(${i})">${editIcon}</button>` : ''}
+                         <button class="action-btn" title="Edit" onclick="focusMessage(${i})">${editIcon}</button>
                          <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
                     </div>
                 </div>
-                <div class="message-content"
+                <div class="message-content" 
                      id="msg-${i}"
-                     ${isEditable && isUser ? 'contenteditable="true"' : ''}
+                     contenteditable="true" 
                      onblur="updateMessageContent(${i}, this.innerText)">${contentDisplay}</div>
             </div>
         `;
