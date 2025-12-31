@@ -14,16 +14,47 @@
 </head>
 
 <body>
+    <div id="mobileHeader" class="mobile-only-header">
+        <button id="btnToggleLeft" class="mobile-toggle-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+        <div class="mobile-app-title">DevTalk</div>
+        <button id="btnToggleRight" class="mobile-toggle-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+        </button>
+    </div>
+
+    <div id="sidePaneOverlay" class="panel-overlay"></div>
+
     <div class="container">
         <!-- Left Panel: Model Configuration -->
-        <div class="panel left-panel">
+        <div class="panel left-panel" id="leftPanel">
+            <div class="mobile-panel-header mobile-only">
+                <h3>Model Config</h3>
+                <button class="close-panel-btn" onclick="toggleSidebar('left')">×</button>
+            </div>
             <div class="panel-header">Model Configuration</div>
             <div class="panel-content">
                 <div class="input-group">
                     <label>API Key</label>
-                    <div class="password-container">
-                        <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
-                        <button class="toggle-password" id="toggleApiKey">👁️</button>
+                    <div class="api-key-container">
+                        <input type="password" id="apiKey" placeholder="sk-...">
+                        <button class="icon-btn" id="toggleApiKey" title="Show/Hide">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -85,7 +116,11 @@
         </div>
 
         <!-- Right Panel: Tools & Options -->
-        <div class="panel right-panel">
+        <div class="panel right-panel" id="rightPanel">
+            <div class="mobile-panel-header mobile-only">
+                <h3>Tools & Options</h3>
+                <button class="close-panel-btn" onclick="toggleSidebar('right')">×</button>
+            </div>
             <div class="panel-header">Tools & Options</div>
             <div class="panel-content">
 
@@ -99,7 +134,12 @@
                 <div class="input-group">
                     <div class="checkbox-group">
                         <input type="checkbox" id="enableTools">
-                        <label for="enableTools" style="display:inline;">Enable Tools</label>
+                        <label for="enableTools">Enable Tools Simulation</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableMarkdown" checked>
+                        <label for="enableMarkdown">Enable Markdown Rendering</label>
                     </div>
                 </div>
 

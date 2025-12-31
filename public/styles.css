@@ -338,6 +338,151 @@ button.danger:hover {
     color: white;
 }
 
+/* Mobile UI Elements */
+.mobile-only-header {
+    display: none;
+    background: #1a1a1a;
+    padding: 10px 16px;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.mobile-toggle-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.mobile-app-title {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #007bff;
+}
+
+.panel-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1900;
+}
+
+.mobile-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+}
+
+.close-panel-btn {
+    background: none;
+    border: none;
+    color: #ff4444;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Container & Layout */
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Responsive Queries */
+@media (max-width: 1100px) {
+    .container {
+        grid-template-columns: 280px 1fr 280px;
+    }
+}
+
+@media (max-width: 900px) {
+    .mobile-only-header {
+        display: flex;
+    }
+
+    .container {
+        display: block;
+        height: calc(100vh - 50px);
+    }
+
+    .left-panel,
+    .right-panel {
+        position: fixed;
+        top: 0;
+        width: 80%;
+        max-width: 350px;
+        height: 100%;
+        z-index: 2000;
+        transition: transform 0.3s ease;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .left-panel {
+        left: 0;
+        transform: translateX(-105%);
+    }
+
+    .right-panel {
+        right: 0;
+        transform: translateX(105%);
+    }
+
+    .left-panel.open,
+    .right-panel.open {
+        transform: translateX(0);
+    }
+
+    .mobile-only {
+        display: flex;
+    }
+
+    .middle-panel {
+        height: 100%;
+    }
+}
+
+.mobile-only {
+    display: none;
+}
+
+/* Panels */
+.left-panel,
+.right-panel {
+    background: #1a1a1a;
+    padding: 20px;
+    border-right: 1px solid #2a2a2a;
+    overflow-y: auto;
+}
+
+.right-panel {
+    border-right: none;
+    border-left: 1px solid #2a2a2a;
+}
+
+.middle-panel {
+    display: flex;
+    flex-direction: column;
+    background: #121212;
+}
+
 /* Chat Area */
 .chat-container {
     display: flex;

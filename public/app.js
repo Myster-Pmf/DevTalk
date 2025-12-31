@@ -146,6 +146,17 @@ function init() {
     els.toolsEditor.addEventListener('input', updateGeneratedCode);
     els.enableTools.onchange = updateGeneratedCode;
 
+    // Markdown Toggle Event
+    document.getElementById('enableMarkdown').onchange = () => {
+        saveToStorage();
+        renderMessages();
+    };
+
+    // Mobile Sidebar Toggles
+    document.getElementById('btnToggleLeft').onclick = () => toggleSidebar('left');
+    document.getElementById('btnToggleRight').onclick = () => toggleSidebar('right');
+    document.getElementById('sidePaneOverlay').onclick = closeAllSidebars;
+
     document.getElementById('btnCopyGenCode').onclick = () => {
         const output = document.getElementById('codeOutput');
         output.select();
@@ -156,6 +167,29 @@ function init() {
 
     // Initial code gen
     updateGeneratedCode();
+}
+
+function toggleSidebar(side) {
+    const left = document.getElementById('leftPanel');
+    const right = document.getElementById('rightPanel');
+    const overlay = document.getElementById('sidePaneOverlay');
+
+    if (side === 'left') {
+        left.classList.toggle('open');
+        right.classList.remove('open');
+    } else {
+        right.classList.toggle('open');
+        left.classList.remove('open');
+    }
+
+    const isAnyOpen = left.classList.contains('open') || right.classList.contains('open');
+    overlay.style.display = isAnyOpen ? 'block' : 'none';
+}
+
+function closeAllSidebars() {
+    document.getElementById('leftPanel').classList.remove('open');
+    document.getElementById('rightPanel').classList.remove('open');
+    document.getElementById('sidePaneOverlay').style.display = 'none';
 }
 
 // --- STATE MANAGEMENT ---
@@ -176,6 +210,9 @@ function loadFromStorage() {
             if (data.toolCode) {
                 document.getElementById('toolCodeEditor').value = data.toolCode;
             }
+            if (data.enableMarkdown !== undefined) {
+                document.getElementById('enableMarkdown').checked = data.enableMarkdown;
+            }
         } catch (e) { console.error("Storage Error", e); }
     }
 }
@@ -187,6 +224,7 @@ function saveToStorage() {
     } catch (e) { }
 
     const toolCode = document.getElementById('toolCodeEditor').value;
+    const enableMarkdown = document.getElementById('enableMarkdown').checked;
 
     localStorage.setItem('chatPlayground_v3', JSON.stringify({
         models,
@@ -194,7 +232,8 @@ function saveToStorage() {
         chatTabs,
         activeTabIndex,
         tools: currentTools,
-        toolCode: toolCode
+        toolCode: toolCode,
+        enableMarkdown: enableMarkdown
     }));
 }
 
@@ -611,8 +650,9 @@ function renderMessages() {
 
         // Handle Content
         if (msg.content) {
+            const useMarkdown = document.getElementById('enableMarkdown').checked;
             // Use MARKED for parsing
-            if (typeof marked !== 'undefined') {
+            if (useMarkdown && typeof marked !== 'undefined') {
                 contentDisplay += marked.parse(msg.content);
             } else {
                 contentDisplay += escapeHtml(msg.content);
@@ -839,7 +879,8 @@ function exportChat() {
         chatTabs: chatTabs,
         activeTabIndex: activeTabIndex,
         tools: currentTools,
-        toolCode: document.getElementById('toolCodeEditor').value
+        toolCode: document.getElementById('toolCodeEditor').value,
+        enableMarkdown: document.getElementById('enableMarkdown').checked
     };
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
