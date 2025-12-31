@@ -416,8 +416,13 @@ function importModels(newModels) {
     });
 
     if (addedCount > 0) {
-        saveToStorage();
-        renderModels();
+        // If no model was active, select the first newly added one
+        if (activeModelIndex === null && models.length > 0) {
+            selectModel(models.length - addedCount);
+        } else {
+            saveToStorage();
+            renderModels();
+        }
         showStatus(`Imported ${addedCount} models. Skipped ${skippedCount}.`, '');
     } else {
         showStatus(`No new models added. Skipped ${skippedCount} duplicates/invalid.`, 'error');
@@ -792,6 +797,7 @@ function renderMessages() {
                 <div class="message-content" 
                      id="msg-${i}"
                      contenteditable="true" 
+                     onfocus="prepareForEdit(${i})"
                      onblur="updateMessageContent(${i}, this.innerText)">${contentDisplay}</div>
             </div>
         `;
@@ -928,8 +934,24 @@ function updateMessageContent(index, newContent) {
             messages[index].content = newContent;
             saveToStorage();
             updateGeneratedCode();
-            // Optional: visual feedback
+            renderMessages(); // Re-render to show markdown again
         }
+    }
+}
+
+function prepareForEdit(index) {
+    const el = document.getElementById(`msg-${index}`);
+    const tab = chatTabs[activeTabIndex];
+    if (!el || !tab) return;
+
+    const msg = tab.messages[index];
+    if (!msg) return;
+
+    // If markdown is enabled, we need to show the RAW content, not the HTML
+    const useMarkdown = document.getElementById('enableMarkdown').checked;
+    if (useMarkdown) {
+        // Swap rendered HTML for raw markdown text
+        el.innerText = msg.content;
     }
 }
 
