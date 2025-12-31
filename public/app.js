@@ -568,10 +568,10 @@ async function sendMessage(isRegen = false) {
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
 
     // 1. Add User Message to UI (Skip if regenerating)
-    if (!isRegen) {
+    // Check for explicit true to avoid MouseEvent misinterpretation
+    if (isRegen !== true) {
         const content = els.userInput.value.trim();
-        // Allow empty if intended, though usually users want some text. 
-        // User explicitly asked to allow empty.
+        // Allow empty if intended.
         tab.messages.push({ role: 'user', content });
         els.userInput.value = '';
         renderMessages();
@@ -934,8 +934,9 @@ function updateMessageContent(index, newContent) {
             messages[index].content = newContent;
             saveToStorage();
             updateGeneratedCode();
-            renderMessages(); // Re-render to show markdown again
         }
+        // Always re-render on blur to swap raw text back to markdown HTML
+        renderMessages();
     }
 }
 
