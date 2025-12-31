@@ -115,6 +115,7 @@ function init() {
             if (chatTabs[activeTabIndex]) {
                 chatTabs[activeTabIndex].systemPrompt = els.systemPrompt.value;
                 saveToStorage();
+                updateGeneratedCode();
             }
         });
     }
@@ -145,6 +146,13 @@ function init() {
     document.getElementById('toolCodeEditor').addEventListener('input', updateGeneratedCode);
     els.toolsEditor.addEventListener('input', updateGeneratedCode);
     els.enableTools.onchange = updateGeneratedCode;
+
+    // Model Parameter Real-time Updates (for cURL preview)
+    els.modelName.addEventListener('input', updateGeneratedCode);
+    els.baseUrl.addEventListener('input', updateGeneratedCode);
+    els.temperature.addEventListener('input', updateGeneratedCode);
+    els.maxTokens.addEventListener('input', updateGeneratedCode);
+    els.apiKey.addEventListener('input', updateGeneratedCode);
 
     // Markdown Toggle Event
     document.getElementById('enableMarkdown').onchange = () => {
@@ -479,6 +487,7 @@ async function sendMessage() {
     tab.messages.push({ role: 'user', content });
     els.userInput.value = '';
     renderMessages();
+    updateGeneratedCode();
     showStatus('Sending...', 'loading');
 
     // 2. Prepare Payload
@@ -574,6 +583,7 @@ async function sendMessage() {
             });
             saveToStorage();
             renderMessages();
+            updateGeneratedCode();
             hideStatus();
         }
 
@@ -819,6 +829,7 @@ function updateMessageContent(index, newContent) {
         if (messages[index].content !== newContent) {
             messages[index].content = newContent;
             saveToStorage();
+            updateGeneratedCode();
             // Optional: visual feedback
         }
     }
