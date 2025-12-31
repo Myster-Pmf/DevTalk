@@ -1,7 +1,7 @@
 {
   "name": "DevTalk",
-  "version": "2.0.0",
-  "description": "Private AI Chatbot testing",
+  "version": "3.0.0",
+  "description": "Local AI Playground",
   "main": "api/proxy.js",
   "engines": {
     "node": "24.x"
