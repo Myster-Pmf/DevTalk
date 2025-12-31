@@ -4,6 +4,8 @@ DevTalk is a high-performance, developer-centric web playground for testing and 
 
 **🚀 Try it now:** [dev-talk-beta.vercel.app](https://dev-talk-beta.vercel.app/)
 
+![DevTalk Interface](public/assets/devtalk_interface.png)
+
 > [!NOTE]
 > **Privacy First**: Everything is stored locally in your browser's LocalStorage. Your API keys and chat history never leave your machine (except when sent directly to the model endpoint).
 
