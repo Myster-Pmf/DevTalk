@@ -137,6 +137,7 @@ function init() {
                 chatTabs[activeTabIndex].systemPrompt = els.systemPrompt.value;
                 saveToStorage();
                 updateGeneratedCode();
+                updateTokenHistoryEstimate();
             }
         });
     }
@@ -652,13 +653,24 @@ async function sendMessage(isRegen = false) {
             tab.tokenUsage = (tab.tokenUsage || 0) + usage.total_tokens;
             const tokenDisplay = document.getElementById('tokenUsage');
             if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
+
+            // Store prompt_tokens on the last user message
+            if (usage.prompt_tokens) {
+                for (let i = tab.messages.length - 1; i >= 0; i--) {
+                    if (tab.messages[i].role === 'user') {
+                        tab.messages[i].tokens = usage.prompt_tokens;
+                        break;
+                    }
+                }
+            }
         }
 
         if (assistantMessage.tool_calls) {
             tab.messages.push({
                 role: 'assistant',
                 content: assistantMessage.content || '',
-                tool_calls: assistantMessage.tool_calls
+                tool_calls: assistantMessage.tool_calls,
+                tokens: usage?.completion_tokens || 0
             });
             renderMessages(); // Show tool call in UI
 
@@ -680,7 +692,8 @@ async function sendMessage(isRegen = false) {
         } else {
             tab.messages.push({
                 role: 'assistant',
-                content: assistantMessage.content
+                content: assistantMessage.content,
+                tokens: usage?.completion_tokens || 0
             });
             saveToStorage();
             renderMessages();
@@ -779,6 +792,7 @@ function renderMessages() {
         const deleteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
         const copyIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
         const regenIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l5.64 5.64A9 9 0 0 0 20.49 15"></path></svg>`;
+        const resendIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
 
         const roleDisplay = msg.role.toUpperCase();
         const isAssistant = msg.role === 'assistant';
@@ -790,6 +804,7 @@ function renderMessages() {
                     <div class="message-actions">
                          <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
                          ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
+                         ${isUser ? `<button class="action-btn" title="Resend from here" onclick="resendFromMessage(${i})">${resendIcon}</button>` : ''}
                          <button class="action-btn" title="Edit" onclick="focusMessage(${i})">${editIcon}</button>
                          <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
                     </div>
@@ -824,6 +839,45 @@ function renderMessages() {
 
     // Auto scroll
     els.messages.scrollTop = els.messages.scrollHeight;
+
+    // Update token history estimate
+    updateTokenHistoryEstimate();
+}
+
+function updateTokenHistoryEstimate() {
+    const tab = chatTabs[activeTabIndex];
+    const tokenHistoryEl = document.getElementById('tokenHistory');
+    if (!tokenHistoryEl || !tab) return;
+
+    let totalTokens = 0;
+    let hasStoredTokens = false;
+
+    // Sum up stored token counts from messages
+    if (tab.messages) {
+        tab.messages.forEach(msg => {
+            if (msg.tokens !== undefined) {
+                totalTokens += msg.tokens;
+                hasStoredTokens = true;
+            }
+        });
+    }
+
+    // If we have stored tokens, show them; otherwise show estimate
+    if (hasStoredTokens) {
+        tokenHistoryEl.textContent = totalTokens.toLocaleString();
+    } else {
+        // Fallback: estimate based on characters (~4 chars per token)
+        console.log("Token History: Using character-based estimation fallback.");
+        let totalChars = 0;
+        if (tab.systemPrompt) totalChars += tab.systemPrompt.length;
+        if (tab.messages) {
+            tab.messages.forEach(msg => {
+                if (msg.content) totalChars += msg.content.length;
+            });
+        }
+        const estimated = Math.ceil(totalChars / 4);
+        tokenHistoryEl.textContent = `~${estimated.toLocaleString()}`;
+    }
 }
 
 
@@ -1003,13 +1057,32 @@ function regenerateMessage(index) {
     const tab = chatTabs[activeTabIndex];
     if (!tab) return;
 
-    // Remove the current assistant message and any subsequent tool messages
-    // Actually, usually we regenerate from the last user message.
-    // Let's truncate the history up to this point (excluding this assistant message) and trigger sendMessage.
+    // Check model BEFORE truncating to avoid data loss if model is not selected
+    if (tab.modelIndex === null || !models[tab.modelIndex]) {
+        showStatus('Select a model first', 'error');
+        return;
+    }
 
-    // If it's the last message, just pop it and send again.
-    // If it's in the middle, we truncate.
+    // Truncate messages up to this point (excluding this assistant message)
     tab.messages = tab.messages.slice(0, index);
+    saveToStorage();
+    renderMessages();
+    sendMessage(true);
+}
+
+function resendFromMessage(index) {
+    const tab = chatTabs[activeTabIndex];
+    if (!tab) return;
+
+    // Check model BEFORE truncating
+    if (tab.modelIndex === null || !models[tab.modelIndex]) {
+        showStatus('Select a model first', 'error');
+        return;
+    }
+
+    // Truncate messages to include this user message (index + 1)
+    tab.messages = tab.messages.slice(0, index + 1);
+    saveToStorage();
     renderMessages();
     sendMessage(true);
 }
