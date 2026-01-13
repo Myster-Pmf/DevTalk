@@ -564,6 +564,16 @@ function normalizeUrl(baseUrl) {
     return cleaned;
 }
 
+// Helper to strip extra fields (like 'tokens') before sending to AI providers
+function prepareCleanMessages(messages) {
+    return messages.map(m => {
+        const cleanMsg = { role: m.role, content: m.content || "" };
+        if (m.tool_calls) cleanMsg.tool_calls = m.tool_calls;
+        if (m.tool_call_id) cleanMsg.tool_call_id = m.tool_call_id;
+        return cleanMsg;
+    });
+}
+
 async function sendMessage(isRegen = false) {
     const tab = chatTabs[activeTabIndex];
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
@@ -593,9 +603,10 @@ async function sendMessage(isRegen = false) {
     showStatus('Sending...', 'loading');
 
     // 2. Prepare Payload
+    const history = prepareCleanMessages(tab.messages);
     const apiMessages = [];
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
-    apiMessages.push(...tab.messages);
+    apiMessages.push(...history);
 
     const requestBody = {
         model: model.name,
@@ -901,15 +912,7 @@ function updateGeneratedCode() {
     const apiMessages = [];
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
     if (tab.messages) {
-        tab.messages.forEach(m => {
-            // Include user and assistant messages, and tool messages
-            if (m.role === 'user' || m.role === 'assistant' || m.role === 'system' || m.role === 'tool') {
-                const cleanMsg = { role: m.role, content: m.content || "" };
-                if (m.tool_calls) cleanMsg.tool_calls = m.tool_calls;
-                if (m.tool_call_id) cleanMsg.tool_call_id = m.tool_call_id;
-                apiMessages.push(cleanMsg);
-            }
-        });
+        apiMessages.push(...prepareCleanMessages(tab.messages));
     }
 
     // Prepare Tools
