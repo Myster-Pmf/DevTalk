@@ -584,69 +584,28 @@ body {
 
 .message-edit-area {
     width: 100%;
-    min-height: 20px;
-    background: transparent;
-    color: #4caf50;
-    /* Markdown syntax color */
-    border: none;
-    border-radius: 0;
-    padding: 0;
+    min-height: 60px;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    border: 1px solid #0066cc;
+    border-radius: 4px;
+    padding: 12px;
     font-family: 'Fira Code', 'Cascadia Code', 'Monaco', monospace;
     font-size: 14px;
-    line-height: inherit;
+    line-height: 1.6;
     resize: none;
     outline: none;
-    overflow-y: hidden;
-    margin: 0;
-    display: block;
-    position: relative;
-    z-index: 2;
-    caret-color: #fff;
+    box-shadow: 0 0 12px rgba(0, 102, 204, 0.15);
 }
 
-.msg-block {
-    position: relative;
-    cursor: text;
-    transition: background 0.1s;
-    border-radius: 4px;
-    padding: 1px 0;
-    margin: 0;
-}
-
-.msg-block:hover {
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.msg-block.editing {
-    background: rgba(0, 102, 204, 0.05);
-}
-
-/* Match raw text styles to rendered ones in the editor */
-.msg-block.editing textarea {
-    color: #4caf50;
-    /* Raw text color hint */
-}
-
-.block-editor-container {
-    position: relative;
-    width: 100%;
-}
-
-.block-live-preview {
-    opacity: 0.6;
-    border-top: 1px dashed #444;
-    padding-top: 4px;
-    margin-top: 4px;
-    pointer-events: none;
-}
-
-.msg-block.editing .block-live-preview {
-    display: block;
+.message-edit-area:focus {
+    border-color: #3399ff;
+    box-shadow: 0 0 16px rgba(0, 102, 204, 0.3);
 }
 
 @keyframes fadeIn {
     from {
-        opacity: 0.8;
+        opacity: 0.9;
     }
 
     to {
