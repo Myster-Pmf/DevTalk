@@ -809,22 +809,18 @@ function renderMessages() {
         const isAssistant = msg.role === 'assistant';
 
         return `
-            <div class="message">
+            <div class="message" id="msg-container-${i}">
                 <div class="message-header">
                     <span class="message-role">${roleDisplay}</span>
                     <div class="message-actions">
                          <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
                          ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
                          ${isUser ? `<button class="action-btn" title="Resend from here" onclick="resendFromMessage(${i})">${resendIcon}</button>` : ''}
-                         <button class="action-btn" title="Edit" onclick="focusMessage(${i})">${editIcon}</button>
+                         <button class="action-btn" title="Edit" onclick="startEditing(${i})">${editIcon}</button>
                          <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
                     </div>
                 </div>
-                <div class="message-content" 
-                     id="msg-${i}"
-                     contenteditable="true" 
-                     onfocus="prepareForEdit(${i})"
-                     onblur="updateMessageContent(${i}, this.innerText)">${contentDisplay}</div>
+                <div class="message-content" id="msg-${i}">${contentDisplay}</div>
             </div>
         `;
     }).join('');
@@ -976,41 +972,68 @@ fetch(url, {
     outputEl.value = code;
 }
 
-function focusMessage(index) {
-    const el = document.getElementById(`msg-${index}`);
-    if (el) {
-        el.focus();
-        // Move cursor to end (optional, simple focus is often enough)
+function startEditing(index) {
+    const msgEl = document.getElementById(`msg-${index}`);
+    const tab = chatTabs[activeTabIndex];
+    if (!msgEl || !tab || !tab.messages[index]) return;
+
+    const msg = tab.messages[index];
+    const originalHeight = msgEl.offsetHeight;
+
+    // Set a min-height on the container to prevent visual collapse
+    const container = document.getElementById(`msg-container-${index}`);
+    if (container) container.style.minHeight = `${container.offsetHeight}px`;
+
+    // Replace content with a textarea
+    msgEl.innerHTML = `<textarea class="message-edit-area" id="edit-${index}">${msg.content}</textarea>`;
+    const textarea = document.getElementById(`edit-${index}`);
+
+    // Initial resize to content
+    textarea.style.height = `${originalHeight}px`;
+    autoResizeTextarea(textarea);
+
+    textarea.focus();
+
+    // Event listeners
+    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+    textarea.addEventListener('blur', () => finishEditing(index, textarea.value));
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            renderMessages(); // Cancel
+        }
+    });
+}
+
+function finishEditing(index, newContent) {
+    const tab = chatTabs[activeTabIndex];
+    const messages = tab.messages;
+
+    if (messages[index] && messages[index].content !== newContent) {
+        messages[index].content = newContent;
+        saveToStorage();
+        updateGeneratedCode();
     }
+
+    // Re-render will clear the min-height naturally because the whole list is rebuilt
+    renderMessages();
+}
+
+function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight) + 'px';
+}
+
+function focusMessage(index) {
+    startEditing(index);
 }
 
 function updateMessageContent(index, newContent) {
-    const messages = chatTabs[activeTabIndex].messages;
-    if (messages[index]) {
-        if (messages[index].content !== newContent) {
-            messages[index].content = newContent;
-            saveToStorage();
-            updateGeneratedCode();
-        }
-        // Always re-render on blur to swap raw text back to markdown HTML
-        renderMessages();
-    }
+    // This is now handled by finishEditing, but keeping signature for safety if called elsewhere
+    finishEditing(index, newContent);
 }
 
 function prepareForEdit(index) {
-    const el = document.getElementById(`msg-${index}`);
-    const tab = chatTabs[activeTabIndex];
-    if (!el || !tab) return;
-
-    const msg = tab.messages[index];
-    if (!msg) return;
-
-    // If markdown is enabled, we need to show the RAW content, not the HTML
-    const useMarkdown = document.getElementById('enableMarkdown').checked;
-    if (useMarkdown) {
-        // Swap rendered HTML for raw markdown text
-        el.innerText = msg.content;
-    }
+    // Handled by startEditing
 }
 
 function deleteMessage(index) {
