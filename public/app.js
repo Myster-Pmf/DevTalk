@@ -803,13 +803,18 @@ function renderMessageHTML(msg, i) {
         contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
     }
 
-    // Handle Content
     if (msg.content) {
         const useMarkdown = document.getElementById('enableMarkdown').checked;
         if (useMarkdown && typeof marked !== 'undefined') {
-            contentDisplay += marked.parse(msg.content);
+            // Lex the content into top-level blocks
+            const tokens = marked.lexer(msg.content);
+            contentDisplay += tokens.map((token, blockIdx) => {
+                // Render this individual token
+                const rendered = marked.parse(token.raw);
+                return `<div class="msg-block" data-block-idx="${blockIdx}" onclick="startBlockEdit(${i}, ${blockIdx}, event)">${rendered}</div>`;
+            }).join('');
         } else {
-            contentDisplay += escapeHtml(msg.content);
+            contentDisplay += `<div class="msg-block" data-block-idx="0" onclick="startBlockEdit(${i}, 0, event)">${escapeHtml(msg.content)}</div>`;
         }
     }
 
@@ -1008,50 +1013,76 @@ fetch(url, {
     outputEl.value = code;
 }
 
-function startEditing(index) {
-    const msgEl = document.getElementById(`msg-${index}`);
+function startBlockEdit(msgIdx, blockIdx, event) {
+    if (event) event.stopPropagation();
+
+    const msgContainer = document.getElementById(`msg-${msgIdx}`);
+    const blockEl = msgContainer.querySelector(`[data-block-idx="${blockIdx}"]`);
     const tab = chatTabs[activeTabIndex];
-    if (!msgEl || !tab || !tab.messages[index]) return;
+    if (!blockEl || !tab || !tab.messages[msgIdx]) return;
 
-    const msg = tab.messages[index];
-    const originalHeight = msgEl.offsetHeight;
+    const msg = tab.messages[msgIdx];
+    const tokens = marked.lexer(msg.content);
+    const token = tokens[blockIdx];
+    if (!token) return;
+    const originalHeight = blockEl.offsetHeight;
+    blockEl.classList.add('editing');
 
-    // Set a min-height on the container to prevent visual collapse
-    const container = document.getElementById(`msg-container-${index}`);
-    if (container) container.style.minHeight = `${container.offsetHeight}px`;
+    // Replace content of ONLY THIS BLOCK with a textarea and a preview div
+    blockEl.innerHTML = `
+        <div class="block-editor-container">
+            <textarea class="message-edit-area" id="edit-${msgIdx}-${blockIdx}">${token.raw}</textarea>
+            <div class="block-live-preview" id="preview-${msgIdx}-${blockIdx}"></div>
+        </div>
+    `;
+    const textarea = document.getElementById(`edit-${msgIdx}-${blockIdx}`);
+    const preview = document.getElementById(`preview-${msgIdx}-${blockIdx}`);
 
-    // Replace content with a textarea
-    msgEl.innerHTML = `<textarea class="message-edit-area" id="edit-${index}">${msg.content}</textarea>`;
-    const textarea = document.getElementById(`edit-${index}`);
-
-    // Initial resize to content
+    // Initial resize and render
     textarea.style.height = `${originalHeight}px`;
     autoResizeTextarea(textarea);
-
+    if (preview) preview.innerHTML = marked.parse(token.raw);
     textarea.focus();
 
     // Event listeners
-    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
-    textarea.addEventListener('blur', () => finishEditing(index, textarea.value));
+    textarea.addEventListener('input', () => {
+        autoResizeTextarea(textarea);
+        if (preview) preview.innerHTML = marked.parse(textarea.value);
+    });
+    textarea.addEventListener('blur', () => finishBlockEdit(msgIdx, blockIdx, textarea.value));
     textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            renderMessages(); // Cancel
+            renderSingleMessage(msgIdx); // Cancel
+        }
+        if (e.key === 'Enter' && e.ctrlKey) {
+            textarea.blur();
         }
     });
 }
 
-function finishEditing(index, newContent) {
+function finishBlockEdit(msgIdx, blockIdx, newRaw) {
     const tab = chatTabs[activeTabIndex];
-    const messages = tab.messages;
+    const msg = tab.messages[msgIdx];
+    if (!msg) return;
 
-    if (messages[index] && messages[index].content !== newContent) {
-        messages[index].content = newContent;
-        saveToStorage();
-        updateGeneratedCode();
+    const tokens = marked.lexer(msg.content);
+    if (tokens[blockIdx]) {
+        if (tokens[blockIdx].raw !== newRaw) {
+            tokens[blockIdx].raw = newRaw;
+            // Reconstruct the full message content
+            msg.content = tokens.map(t => t.raw).join('');
+            saveToStorage();
+            updateGeneratedCode();
+        }
     }
 
     // Surgical update: Only re-render this message
-    renderSingleMessage(index);
+    renderSingleMessage(msgIdx);
+}
+
+function startEditing(index) {
+    // Default to editing the first block or finding where the user clicked
+    startBlockEdit(index, 0);
 }
 
 function autoResizeTextarea(el) {
