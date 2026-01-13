@@ -773,60 +773,80 @@ function simulateTool(toolCall) {
 
 function renderMessages() {
     const messages = chatTabs[activeTabIndex]?.messages || [];
-    els.messages.innerHTML = messages.map((msg, i) => {
-        let contentDisplay = '';
-        let isTool = msg.role === 'tool';
-        let isUser = msg.role === 'user';
-
-        // Handle Tool Calls Display
-        if (msg.tool_calls) {
-            contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
-        }
-
-        // Handle Content
-        if (msg.content) {
-            const useMarkdown = document.getElementById('enableMarkdown').checked;
-            // Use MARKED for parsing
-            if (useMarkdown && typeof marked !== 'undefined') {
-                contentDisplay += marked.parse(msg.content);
-            } else {
-                contentDisplay += escapeHtml(msg.content);
-            }
-        }
-
-        if (isTool) {
-            contentDisplay = `<div class="tool-output">${escapeHtml(msg.content)}</div>`;
-        }
-
-        // Icons
-        const editIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
-        const deleteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-        const copyIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-        const regenIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l5.64 5.64A9 9 0 0 0 20.49 15"></path></svg>`;
-        const resendIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
-
-        const roleDisplay = msg.role.toUpperCase();
-        const isAssistant = msg.role === 'assistant';
-
-        return `
-            <div class="message" id="msg-container-${i}">
-                <div class="message-header">
-                    <span class="message-role">${roleDisplay}</span>
-                    <div class="message-actions">
-                         <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
-                         ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
-                         ${isUser ? `<button class="action-btn" title="Resend from here" onclick="resendFromMessage(${i})">${resendIcon}</button>` : ''}
-                         <button class="action-btn" title="Edit" onclick="startEditing(${i})">${editIcon}</button>
-                         <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
-                    </div>
-                </div>
-                <div class="message-content" id="msg-${i}">${contentDisplay}</div>
-            </div>
-        `;
-    }).join('');
+    els.messages.innerHTML = messages.map((msg, i) => renderMessageHTML(msg, i)).join('');
 
     // Post-process for HighlightJS and Copy Buttons
-    document.querySelectorAll('.message-content pre code').forEach((block) => {
+    processMessageContent();
+
+    // Auto scroll if near bottom
+    if (isNearBottom()) {
+        els.messages.scrollTop = els.messages.scrollHeight;
+    }
+
+    // Update token history estimate
+    updateTokenHistoryEstimate();
+}
+
+// Helper to check if user is near the bottom of the chat
+function isNearBottom() {
+    const threshold = 100;
+    return els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight < threshold;
+}
+
+function renderMessageHTML(msg, i) {
+    let contentDisplay = '';
+    let isTool = msg.role === 'tool';
+    let isUser = msg.role === 'user';
+
+    // Handle Tool Calls Display
+    if (msg.tool_calls) {
+        contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
+    }
+
+    // Handle Content
+    if (msg.content) {
+        const useMarkdown = document.getElementById('enableMarkdown').checked;
+        if (useMarkdown && typeof marked !== 'undefined') {
+            contentDisplay += marked.parse(msg.content);
+        } else {
+            contentDisplay += escapeHtml(msg.content);
+        }
+    }
+
+    if (isTool) {
+        contentDisplay = `<div class="tool-output">${escapeHtml(msg.content)}</div>`;
+    }
+
+    // Icons
+    const editIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+    const deleteIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+    const copyIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+    const regenIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l5.64 5.64A9 9 0 0 0 20.49 15"></path></svg>`;
+    const resendIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+
+    const roleDisplay = msg.role.toUpperCase();
+    const isAssistant = msg.role === 'assistant';
+
+    return `
+        <div class="message" id="msg-container-${i}">
+            <div class="message-header">
+                <span class="message-role">${roleDisplay}</span>
+                <div class="message-actions">
+                     <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
+                     ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
+                     ${isUser ? `<button class="action-btn" title="Resend from here" onclick="resendFromMessage(${i})">${resendIcon}</button>` : ''}
+                     <button class="action-btn" title="Edit" onclick="startEditing(${i})">${editIcon}</button>
+                     <button class="action-btn" title="Delete" onclick="deleteMessage(${i})">${deleteIcon}</button>
+                </div>
+            </div>
+            <div class="message-content" id="msg-${i}">${contentDisplay}</div>
+        </div>
+    `;
+}
+
+function processMessageContent(specificEl) {
+    const parent = specificEl || document;
+    parent.querySelectorAll('.message-content pre code').forEach((block) => {
         if (typeof hljs !== 'undefined') hljs.highlightElement(block);
 
         // Add Copy Button
@@ -843,12 +863,28 @@ function renderMessages() {
             pre.appendChild(btn);
         }
     });
+}
 
-    // Auto scroll
-    els.messages.scrollTop = els.messages.scrollHeight;
+function renderSingleMessage(index) {
+    const tab = chatTabs[activeTabIndex];
+    if (!tab || !tab.messages[index]) return;
 
-    // Update token history estimate
-    updateTokenHistoryEstimate();
+    const container = document.getElementById(`msg-container-${index}`);
+    if (!container) return;
+
+    const msg = tab.messages[index];
+    const newHtml = renderMessageHTML(msg, index);
+
+    // Create a temporary element to parse the HTML string
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = newHtml;
+    const newMessageEl = tempDiv.firstElementChild;
+
+    // Replace the old message node with the new one
+    container.replaceWith(newMessageEl);
+
+    // Process highlight/copy buttons for this specific element
+    processMessageContent(newMessageEl);
 }
 
 function updateTokenHistoryEstimate() {
@@ -1014,8 +1050,8 @@ function finishEditing(index, newContent) {
         updateGeneratedCode();
     }
 
-    // Re-render will clear the min-height naturally because the whole list is rebuilt
-    renderMessages();
+    // Surgical update: Only re-render this message
+    renderSingleMessage(index);
 }
 
 function autoResizeTextarea(el) {

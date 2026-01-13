@@ -575,6 +575,7 @@ body {
     border: none;
     word-break: break-word;
     overflow-wrap: break-word;
+    animation: fadeIn 0.3s ease-out;
 }
 
 .message-content:focus {
@@ -584,18 +585,31 @@ body {
 .message-edit-area {
     width: 100%;
     min-height: 40px;
-    background: #222;
+    background: #111;
     color: #e0e0e0;
-    border: 1px solid #444;
+    border: 1px solid #0066cc;
     border-radius: 4px;
-    padding: 8px;
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 13px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 14px;
     line-height: 1.5;
     resize: none;
     outline: none;
     overflow-y: hidden;
     margin: 4px 0;
+    box-shadow: 0 0 10px rgba(0, 102, 204, 0.2);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0.8;
+        transform: translateY(2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Markdown Specific Styling inside messages */
