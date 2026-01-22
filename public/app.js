@@ -64,6 +64,8 @@ let chatTabs = [];
 let activeTabIndex = 0;
 // Current Tools state (editable by user)
 let currentTools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
+// Pending images for next message (base64 data URLs)
+let pendingImages = [];
 
 // --- DOM ELEMENTS ---
 const els = {
@@ -118,6 +120,10 @@ function init() {
     document.getElementById('btnResetTools').onclick = resetTools;
     document.getElementById('btnFormatTools').onclick = formatTools;
     document.getElementById('importFile').onchange = importChat;
+
+    // Image Upload Events
+    document.getElementById('btnAttachImage').onclick = () => document.getElementById('imageInput').click();
+    document.getElementById('imageInput').onchange = handleImageSelect;
 
     // Model Export/Import
     document.getElementById('btnExportModels').onclick = exportModels;
@@ -592,9 +598,12 @@ async function sendMessage(isRegen = false) {
 
     // 1. Add User Message to UI (Skip if regenerating)
     if (isRegen !== true) {
-        const content = els.userInput.value.trim();
-        tab.messages.push({ role: 'user', content });
+        const textContent = els.userInput.value.trim();
+        // Format content with images if any are pending
+        const messageContent = formatMessageContent(textContent, pendingImages);
+        tab.messages.push({ role: 'user', content: messageContent });
         els.userInput.value = '';
+        clearPendingImages();
         renderMessages();
         updateGeneratedCode();
     }
@@ -929,17 +938,36 @@ function renderMessageHTML(msg, i) {
         contentDisplay += `<div class="tool-output">🛠 Calls: ${msg.tool_calls.map(t => t.function.name).join(', ')}</div>`;
     }
 
+    // Handle content (can be string or array with images)
     if (msg.content) {
         const useMarkdown = document.getElementById('enableMarkdown').checked;
-        if (useMarkdown && typeof marked !== 'undefined') {
-            contentDisplay += marked.parse(msg.content);
+
+        // Check if content is an array (has images)
+        if (Array.isArray(msg.content)) {
+            // Render images first
+            contentDisplay += renderImageContent(msg.content);
+            // Then render text
+            const textContent = getTextFromContent(msg.content);
+            if (textContent) {
+                if (useMarkdown && typeof marked !== 'undefined') {
+                    contentDisplay += marked.parse(textContent);
+                } else {
+                    contentDisplay += escapeHtml(textContent);
+                }
+            }
         } else {
-            contentDisplay += escapeHtml(msg.content);
+            // String content
+            if (useMarkdown && typeof marked !== 'undefined') {
+                contentDisplay += marked.parse(msg.content);
+            } else {
+                contentDisplay += escapeHtml(msg.content);
+            }
         }
     }
 
     if (isTool) {
-        contentDisplay = `<div class="tool-output">${escapeHtml(msg.content)}</div>`;
+        const toolContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        contentDisplay = `<div class="tool-output">${escapeHtml(toolContent)}</div>`;
     }
 
     // Icons
@@ -1393,6 +1421,111 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// --- IMAGE UPLOAD FUNCTIONS ---
+
+function handleImageSelect(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            pendingImages.push({
+                data: e.target.result,
+                name: file.name,
+                type: file.type
+            });
+            renderImagePreviews();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    event.target.value = ''; // Reset input
+}
+
+function renderImagePreviews() {
+    const previewArea = document.getElementById('imagePreviewArea');
+    if (!previewArea) return;
+
+    if (pendingImages.length === 0) {
+        previewArea.style.display = 'none';
+        previewArea.innerHTML = '';
+        return;
+    }
+
+    previewArea.style.display = 'flex';
+    previewArea.innerHTML = `
+        <div class="image-warning">
+            <span>⚠️</span>
+            <span>Images may not work with all models. Only vision-capable models (e.g., gpt-4o, llava) can process images.</span>
+        </div>
+    ` + pendingImages.map((img, i) => `
+        <div class="image-preview-item">
+            <img src="${img.data}" alt="${escapeHtml(img.name)}">
+            <button class="image-preview-remove" onclick="removePreviewImage(${i})">×</button>
+        </div>
+    `).join('');
+}
+
+function removePreviewImage(index) {
+    pendingImages.splice(index, 1);
+    renderImagePreviews();
+}
+
+function clearPendingImages() {
+    pendingImages = [];
+    renderImagePreviews();
+}
+
+// Format content for vision API (returns string or array with text+images)
+function formatMessageContent(text, images) {
+    if (!images || images.length === 0) {
+        return text;
+    }
+
+    const content = [];
+
+    // Add text part
+    if (text) {
+        content.push({ type: 'text', text: text });
+    }
+
+    // Add image parts
+    for (const img of images) {
+        content.push({
+            type: 'image_url',
+            image_url: { url: img.data }
+        });
+    }
+
+    return content;
+}
+
+// Render image content in chat messages
+function renderImageContent(content) {
+    if (typeof content === 'string') return '';
+    if (!Array.isArray(content)) return '';
+
+    let html = '';
+    for (const part of content) {
+        if (part.type === 'image_url' && part.image_url?.url) {
+            html += `<img src="${part.image_url.url}" class="message-image" onclick="window.open(this.src, '_blank')">`;
+        }
+    }
+    return html;
+}
+
+// Extract text from content (string or array)
+function getTextFromContent(content) {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return '';
+
+    const textParts = content.filter(p => p.type === 'text').map(p => p.text);
+    return textParts.join('\n');
 }
 
 // Start

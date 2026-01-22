@@ -836,3 +836,93 @@ body {
 .github-link:hover svg {
     opacity: 1;
 }
+
+/* Image Upload Styles */
+.attach-btn {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    padding: 8px;
+    color: #888;
+    flex-shrink: 0;
+}
+
+.attach-btn:hover {
+    background: #3a3a3a;
+    color: #fff;
+}
+
+.image-preview-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    background: #222;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.image-preview-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #444;
+}
+
+.image-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-preview-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    border-radius: 50%;
+    color: #ff4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.image-preview-remove:hover {
+    background: #ff4444;
+    color: #fff;
+}
+
+/* Chat message images */
+.message-image {
+    max-width: 300px;
+    max-height: 300px;
+    border-radius: 8px;
+    margin: 8px 0;
+    cursor: pointer;
+    border: 1px solid #333;
+}
+
+.message-image:hover {
+    border-color: #0066cc;
+}
+
+/* Image warning banner */
+.image-warning {
+    background: #3a3a1a;
+    color: #ffeb3b;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
