@@ -252,6 +252,9 @@ function loadFromStorage() {
             if (data.enableStreaming !== undefined) {
                 document.getElementById('enableStreaming').checked = data.enableStreaming;
             }
+            if (data.enableVision !== undefined) {
+                document.getElementById('enableVision').checked = data.enableVision;
+            }
         } catch (e) { console.error("Storage Error", e); }
     }
 }
@@ -265,6 +268,7 @@ function saveToStorage() {
     const toolCode = document.getElementById('toolCodeEditor').value;
     const enableMarkdown = document.getElementById('enableMarkdown').checked;
     const enableStreaming = document.getElementById('enableStreaming').checked;
+    const enableVision = document.getElementById('enableVision').checked;
 
     localStorage.setItem('chatPlayground_v3', JSON.stringify({
         models,
@@ -274,7 +278,8 @@ function saveToStorage() {
         tools: currentTools,
         toolCode: toolCode,
         enableMarkdown: enableMarkdown,
-        enableStreaming: enableStreaming
+        enableStreaming: enableStreaming,
+        enableVision: enableVision
     }));
 }
 
@@ -583,14 +588,19 @@ function normalizeUrl(baseUrl) {
 }
 
 // Helper to strip extra fields (like 'tokens') before sending to AI providers
-// isOllama: if true, convert image content to Ollama format
-function prepareCleanMessages(messages, isOllama = false) {
+// isOllama: if true, use Ollama's image format (separate images array)
+// isVisionModel: if false, strip images and flatten array content to text
+function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) {
     return messages.map(m => {
         const cleanMsg = { role: m.role };
 
         // Handle content (can be string or array with images)
         if (Array.isArray(m.content)) {
-            if (isOllama) {
+            if (!isVisionModel) {
+                // Non-vision model: flatten to text only, strip images
+                const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
+                cleanMsg.content = textParts.join('\n') || '';
+            } else if (isOllama) {
                 // Ollama format: content is string, images are separate base64 array
                 const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
                 cleanMsg.content = textParts.join('\n') || '';
@@ -605,7 +615,7 @@ function prepareCleanMessages(messages, isOllama = false) {
                     });
                 }
             } else {
-                // OpenAI format: keep array as-is
+                // OpenAI vision format: keep array as-is
                 cleanMsg.content = m.content;
             }
         } else {
@@ -651,7 +661,10 @@ async function sendMessage(isRegen = false) {
     // Detect if this is an Ollama endpoint (not ending with /v1)
     const isOllama = !model.baseUrl.trim().replace(/\/+$/, '').endsWith('/v1');
 
-    const history = prepareCleanMessages(tab.messages, isOllama);
+    // Check if Vision Model toggle is enabled
+    const isVisionModel = document.getElementById('enableVision').checked;
+
+    const history = prepareCleanMessages(tab.messages, isOllama, isVisionModel);
     const apiMessages = [];
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
     apiMessages.push(...history);
