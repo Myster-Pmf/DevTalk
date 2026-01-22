@@ -252,9 +252,6 @@ function loadFromStorage() {
             if (data.enableStreaming !== undefined) {
                 document.getElementById('enableStreaming').checked = data.enableStreaming;
             }
-            if (data.enableVision !== undefined) {
-                document.getElementById('enableVision').checked = data.enableVision;
-            }
         } catch (e) { console.error("Storage Error", e); }
     }
 }
@@ -268,7 +265,6 @@ function saveToStorage() {
     const toolCode = document.getElementById('toolCodeEditor').value;
     const enableMarkdown = document.getElementById('enableMarkdown').checked;
     const enableStreaming = document.getElementById('enableStreaming').checked;
-    const enableVision = document.getElementById('enableVision').checked;
 
     localStorage.setItem('chatPlayground_v3', JSON.stringify({
         models,
@@ -278,8 +274,7 @@ function saveToStorage() {
         tools: currentTools,
         toolCode: toolCode,
         enableMarkdown: enableMarkdown,
-        enableStreaming: enableStreaming,
-        enableVision: enableVision
+        enableStreaming: enableStreaming
     }));
 }
 
@@ -291,7 +286,8 @@ function getModelFromUI() {
         name: els.modelName.value.trim(),
         baseUrl: els.baseUrl.value.trim(),
         temperature: parseFloat(els.temperature.value),
-        maxTokens: parseInt(els.maxTokens.value)
+        maxTokens: parseInt(els.maxTokens.value),
+        isVision: document.getElementById('isVisionModel').checked
     };
 }
 
@@ -302,6 +298,7 @@ function loadModelToUI(model) {
     els.baseUrl.value = model.baseUrl || '';
     els.temperature.value = model.temperature || 0.7;
     els.maxTokens.value = model.maxTokens || 2048;
+    document.getElementById('isVisionModel').checked = model.isVision || false;
 }
 
 function saveModel() {
@@ -670,8 +667,8 @@ async function sendMessage(isRegen = false) {
     // Detect if this is an Ollama endpoint (not ending with /v1)
     const isOllama = !model.baseUrl.trim().replace(/\/+$/, '').endsWith('/v1');
 
-    // Check if Vision Model toggle is enabled
-    const isVisionModel = document.getElementById('enableVision').checked;
+    // Use the per-model vision setting
+    const isVisionModel = model.isVision || false;
 
     const history = prepareCleanMessages(tab.messages, isOllama, isVisionModel);
     const apiMessages = [];
