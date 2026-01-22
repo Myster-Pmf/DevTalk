@@ -583,9 +583,35 @@ function normalizeUrl(baseUrl) {
 }
 
 // Helper to strip extra fields (like 'tokens') before sending to AI providers
-function prepareCleanMessages(messages) {
+// isOllama: if true, convert image content to Ollama format
+function prepareCleanMessages(messages, isOllama = false) {
     return messages.map(m => {
-        const cleanMsg = { role: m.role, content: m.content || "" };
+        const cleanMsg = { role: m.role };
+
+        // Handle content (can be string or array with images)
+        if (Array.isArray(m.content)) {
+            if (isOllama) {
+                // Ollama format: content is string, images are separate base64 array
+                const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
+                cleanMsg.content = textParts.join('\n') || '';
+
+                const imageParts = m.content.filter(p => p.type === 'image_url' && p.image_url?.url);
+                if (imageParts.length > 0) {
+                    cleanMsg.images = imageParts.map(p => {
+                        // Extract base64 data from data URL
+                        const url = p.image_url.url;
+                        const base64Match = url.match(/^data:image\/[^;]+;base64,(.+)$/);
+                        return base64Match ? base64Match[1] : url;
+                    });
+                }
+            } else {
+                // OpenAI format: keep array as-is
+                cleanMsg.content = m.content;
+            }
+        } else {
+            cleanMsg.content = m.content || '';
+        }
+
         if (m.tool_calls) cleanMsg.tool_calls = m.tool_calls;
         if (m.tool_call_id) cleanMsg.tool_call_id = m.tool_call_id;
         return cleanMsg;
@@ -620,7 +646,12 @@ async function sendMessage(isRegen = false) {
     showStatus('Sending...', 'loading');
 
     // 2. Prepare Payload
-    const history = prepareCleanMessages(tab.messages);
+    const endpointUrl = normalizeUrl(model.baseUrl.trim());
+
+    // Detect if this is an Ollama endpoint (not ending with /v1)
+    const isOllama = !model.baseUrl.trim().replace(/\/+$/, '').endsWith('/v1');
+
+    const history = prepareCleanMessages(tab.messages, isOllama);
     const apiMessages = [];
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
     apiMessages.push(...history);
@@ -646,8 +677,6 @@ async function sendMessage(isRegen = false) {
             return;
         }
     }
-
-    const endpointUrl = normalizeUrl(model.baseUrl.trim());
 
     try {
         if (enableStreaming) {
@@ -1460,8 +1489,7 @@ function renderImagePreviews() {
     previewArea.style.display = 'flex';
     previewArea.innerHTML = `
         <div class="image-warning">
-            <span>⚠️</span>
-            <span>Images may not work with all models. Only vision-capable models (e.g., gpt-4o, llava) can process images.</span>
+            <span>⚠️ Vision models only</span>
         </div>
     ` + pendingImages.map((img, i) => `
         <div class="image-preview-item">
