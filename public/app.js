@@ -597,9 +597,18 @@ function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) 
         // Handle content (can be string or array with images)
         if (Array.isArray(m.content)) {
             if (!isVisionModel) {
-                // Non-vision model: flatten to text only, strip images
+                // Non-vision model: flatten to text, add placeholder for images
                 const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
-                cleanMsg.content = textParts.join('\n') || '';
+                const imageCount = m.content.filter(p => p.type === 'image_url').length;
+
+                let content = textParts.join('\n') || '';
+                if (imageCount > 0) {
+                    const imagePlaceholder = imageCount === 1
+                        ? '[An image was shared but this model cannot view images]'
+                        : `[${imageCount} images were shared but this model cannot view images]`;
+                    content = content ? `${content}\n\n${imagePlaceholder}` : imagePlaceholder;
+                }
+                cleanMsg.content = content;
             } else if (isOllama) {
                 // Ollama format: content is string, images are separate base64 array
                 const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
