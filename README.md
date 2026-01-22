@@ -14,15 +14,16 @@ DevTalk is a high-performance, developer-centric web playground for testing and 
 ## 🚀 Key Features
 
 ### 🛠 Model & Tool Management
-- **Multi-Model Support**: Easily switch between different model providers (OpenAI compatible APIs). Configure API keys, base URLs, and parameters like temperature and max tokens.
+- **Multi-Model Support**: Easily switch between different model providers. Supports **OpenAI compatible APIs**, **Ollama**, and **Ollama Cloud** out of the box.
 - **Dynamic Tool Simulation**: Implement and test LLM tools (function calling) on the fly using the built-in JavaScript editor.
 - **System Prompts**: Set per-tab system prompts to steer model behavior.
 
 ### 💬 Advanced Chat Interface
+- **Real-Time Streaming**: Toggle between single-response and real-time streaming modes for all supported models.
 - **Tabbed Experience**: Organize multiple chat sessions in tabs. Support for right-click tab renaming and full persistence.
 - **Markdown Rendering**: Toggleable GitHub-style markdown rendering with syntax highlighting via `marked.js` and `highlight.js`.
 - **Direct Message Editing**: Click any message to edit its content directly.
-- **Token Tracking**: Real-time token usage monitoring for the current session.
+- **Token Tracking**: Precise token usage monitoring (prompt/completion/total) with support for model-specific usage fields.
 
 ### 💻 Developer Tools
 - **Reactive Code Generator**: Automatically generates production-ready code snippets in **cURL**, **Python (requests)**, and **Node.js (fetch)** based on your current playground settings.
@@ -73,8 +74,9 @@ DevTalk is a high-performance, developer-centric web playground for testing and 
 
 1. **Configure a Model**: Enter your API key, Model Name, and Base URL in the left sidebar.
 2. **Setup Tools (Optional)**: In the right sidebar, define tool JSON and write your simulator logic in the JS code editor.
-3. **Chat**: Use the bottom input to send messages. Toggle Markdown in the right panel if needed.
-4. **Export Your Work**: Use the "Export Chat" button to save your entire configuration for later use.
+3. **Toggle Streaming**: Enable "Real-Time Streaming" in the right panel for incremental responses, or disable it for single JSON blocks.
+4. **Chat**: Use the bottom input to send messages. Toggle Markdown in the right panel if needed.
+5. **Export Your Work**: Use the "Export Chat" button to save your entire configuration for later use.
 
 ---
 
