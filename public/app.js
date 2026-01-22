@@ -298,8 +298,15 @@ function saveModel() {
     if (!model.name) return showStatus('Name required', 'error');
     models.push(model);
     activeModelIndex = models.length - 1;
+
+    // Sync new model with current tab
+    if (chatTabs[activeTabIndex]) {
+        chatTabs[activeTabIndex].modelIndex = activeModelIndex;
+    }
+
     saveToStorage();
     renderModels();
+    renderTabs();
     showStatus('Model Saved', '');
     setTimeout(hideStatus, 2000);
 }
@@ -668,7 +675,13 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) 
     }
 
     if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`);
+        // Handle rate limit errors specifically
+        if (response.status === 429) {
+            throw new Error('Rate limited! Please wait before sending another request.');
+        }
+        // Extract error message from various API formats
+        const errorMsg = data.error?.message || data.error || data.message || `HTTP ${response.status}`;
+        throw new Error(errorMsg);
     }
 
     // Handle OpenAI or Ollama format
@@ -753,7 +766,16 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+        if (response.status === 429) {
+            throw new Error('Rate limited! Please wait before sending another request.');
+        }
+        // Try to parse error JSON
+        try {
+            const errData = JSON.parse(errorText);
+            throw new Error(errData.error?.message || errData.error || errData.message || errorText);
+        } catch (e) {
+            throw new Error(errorText || `HTTP ${response.status}`);
+        }
     }
 
     // Create placeholder message for streaming
