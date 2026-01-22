@@ -557,8 +557,8 @@ function renderTabs() {
 
 // Helper to prepare URL
 function normalizeUrl(baseUrl) {
-    let cleaned = baseUrl.replace(/\/+$/, "");
-    if (!cleaned.endsWith('/chat/completions')) {
+    let cleaned = baseUrl.trim().replace(/\/+$/, "");
+    if (cleaned.endsWith('/v1')) {
         return `${cleaned}/chat/completions`;
     }
     return cleaned;
@@ -656,10 +656,30 @@ async function sendMessage(isRegen = false) {
             throw new Error(data.error || `HTTP ${response.status}`);
         }
 
-        const assistantMessage = data.choices[0].message;
+        // --- HANDLE RESPONSE (OpenAI or Ollama) ---
+        let assistantMessage;
+        let usage;
+
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+            // OpenAI Format
+            assistantMessage = data.choices[0].message;
+            usage = data.usage;
+        } else if (data.message) {
+            // Ollama Format
+            assistantMessage = data.message;
+            // Ollama doesn't return usage in the same way in /api/chat if it's not done, 
+            // but we can try to estimate or use what's there.
+            usage = {
+                total_tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
+                prompt_tokens: data.prompt_eval_count || 0,
+                completion_tokens: data.eval_count || 0
+            };
+        } else {
+            throw new Error("Unknown response format from API");
+        }
 
         // 4. Handle Response & Tools
-        const usage = data.usage;
+        // usage is already extracted above from either OpenAI or Ollama format
         if (usage && usage.total_tokens) {
             tab.tokenUsage = (tab.tokenUsage || 0) + usage.total_tokens;
             const tokenDisplay = document.getElementById('tokenUsage');
