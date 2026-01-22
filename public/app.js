@@ -243,6 +243,9 @@ function loadFromStorage() {
             if (data.enableMarkdown !== undefined) {
                 document.getElementById('enableMarkdown').checked = data.enableMarkdown;
             }
+            if (data.enableStreaming !== undefined) {
+                document.getElementById('enableStreaming').checked = data.enableStreaming;
+            }
         } catch (e) { console.error("Storage Error", e); }
     }
 }
@@ -255,6 +258,7 @@ function saveToStorage() {
 
     const toolCode = document.getElementById('toolCodeEditor').value;
     const enableMarkdown = document.getElementById('enableMarkdown').checked;
+    const enableStreaming = document.getElementById('enableStreaming').checked;
 
     localStorage.setItem('chatPlayground_v3', JSON.stringify({
         models,
@@ -263,7 +267,8 @@ function saveToStorage() {
         activeTabIndex,
         tools: currentTools,
         toolCode: toolCode,
-        enableMarkdown: enableMarkdown
+        enableMarkdown: enableMarkdown,
+        enableStreaming: enableStreaming
     }));
 }
 
@@ -579,22 +584,18 @@ async function sendMessage(isRegen = false) {
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
 
     // 1. Add User Message to UI (Skip if regenerating)
-    // Check for explicit true to avoid MouseEvent misinterpretation
     if (isRegen !== true) {
         const content = els.userInput.value.trim();
-        // Allow empty if intended.
         tab.messages.push({ role: 'user', content });
         els.userInput.value = '';
         renderMessages();
         updateGeneratedCode();
     }
 
-    // Get current model settings
     const model = models[tab.modelIndex];
 
-    // Check if user changed input key without saving
     if (els.apiKey.value.trim() !== model.apiKey) {
-        if (!isRegen) { // Only prompt if this is a fresh send
+        if (!isRegen) {
             if (confirm("API Key in input differs from saved model. Update model?")) {
                 updateModel();
             } else { return; }
@@ -608,11 +609,14 @@ async function sendMessage(isRegen = false) {
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
     apiMessages.push(...history);
 
+    const enableStreaming = document.getElementById('enableStreaming').checked;
+
     const requestBody = {
         model: model.name,
         messages: apiMessages,
         temperature: model.temperature,
         max_tokens: model.maxTokens,
+        stream: enableStreaming
     };
 
     // 3. Add Tools if enabled
@@ -630,112 +634,192 @@ async function sendMessage(isRegen = false) {
     const endpointUrl = normalizeUrl(model.baseUrl.trim());
 
     try {
-        // --- PROXY REQUEST ---
-        // --- PROXY REQUEST ---
-        const response = await fetch('/api/proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                targetUrl: endpointUrl,
-                apiKey: model.apiKey.trim(),
-                body: requestBody
-            })
-        });
-
-        // Get the response text first to handle non-JSON errors
-        const responseText = await response.text();
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            // Server returned non-JSON (like "Internal Server Error" string)
-            throw new Error(responseText || `HTTP ${response.status}`);
-        }
-
-        if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}`);
-        }
-
-        // --- HANDLE RESPONSE (OpenAI or Ollama) ---
-        let assistantMessage;
-        let usage;
-
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-            // OpenAI Format
-            assistantMessage = data.choices[0].message;
-            usage = data.usage;
-        } else if (data.message) {
-            // Ollama Format
-            assistantMessage = data.message;
-            // Ollama doesn't return usage in the same way in /api/chat if it's not done, 
-            // but we can try to estimate or use what's there.
-            usage = {
-                total_tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
-                prompt_tokens: data.prompt_eval_count || 0,
-                completion_tokens: data.eval_count || 0
-            };
+        if (enableStreaming) {
+            // --- STREAMING MODE ---
+            await handleStreamingResponse(tab, model, endpointUrl, requestBody);
         } else {
-            throw new Error("Unknown response format from API");
+            // --- NON-STREAMING MODE ---
+            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody);
         }
-
-        // 4. Handle Response & Tools
-        // usage is already extracted above from either OpenAI or Ollama format
-        if (usage && usage.total_tokens) {
-            tab.tokenUsage = (tab.tokenUsage || 0) + usage.total_tokens;
-            const tokenDisplay = document.getElementById('tokenUsage');
-            if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
-
-            // Store prompt_tokens on the last user message
-            if (usage.prompt_tokens) {
-                for (let i = tab.messages.length - 1; i >= 0; i--) {
-                    if (tab.messages[i].role === 'user') {
-                        tab.messages[i].tokens = usage.prompt_tokens;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (assistantMessage.tool_calls) {
-            tab.messages.push({
-                role: 'assistant',
-                content: assistantMessage.content || '',
-                tool_calls: assistantMessage.tool_calls,
-                tokens: usage?.completion_tokens || 0
-            });
-            renderMessages(); // Show tool call in UI
-
-            // Simulate Tool Execution
-            for (const toolCall of assistantMessage.tool_calls) {
-                const toolResult = simulateTool(toolCall);
-                tab.messages.push({
-                    role: 'tool',
-                    content: JSON.stringify(toolResult),
-                    tool_call_id: toolCall.id
-                });
-            }
-            // Optional: Recursively call sendMessage here if you want automatic follow-up
-            // For playground, we usually just show the result and let user continue or re-send
-            saveToStorage();
-            renderMessages();
-            hideStatus();
-
-        } else {
-            tab.messages.push({
-                role: 'assistant',
-                content: assistantMessage.content,
-                tokens: usage?.completion_tokens || 0
-            });
-            saveToStorage();
-            renderMessages();
-            updateGeneratedCode();
-            hideStatus();
-        }
-
     } catch (error) {
         showStatus(`Error: ${error.message}`, 'error');
         console.error(error);
     }
+}
+
+// --- NON-STREAMING RESPONSE HANDLER ---
+async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) {
+    const response = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            targetUrl: endpointUrl,
+            apiKey: model.apiKey.trim(),
+            body: requestBody
+        })
+    });
+
+    const responseText = await response.text();
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch (e) {
+        throw new Error(responseText || `HTTP ${response.status}`);
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    // Handle OpenAI or Ollama format
+    let assistantMessage;
+    let usage;
+
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+        assistantMessage = data.choices[0].message;
+        usage = data.usage;
+    } else if (data.message) {
+        assistantMessage = data.message;
+        usage = {
+            total_tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
+            prompt_tokens: data.prompt_eval_count || 0,
+            completion_tokens: data.eval_count || 0
+        };
+    } else {
+        throw new Error("Unknown response format from API");
+    }
+
+    // Update token usage
+    if (usage && usage.total_tokens) {
+        tab.tokenUsage = (tab.tokenUsage || 0) + usage.total_tokens;
+        const tokenDisplay = document.getElementById('tokenUsage');
+        if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
+
+        if (usage.prompt_tokens) {
+            for (let i = tab.messages.length - 1; i >= 0; i--) {
+                if (tab.messages[i].role === 'user') {
+                    tab.messages[i].tokens = usage.prompt_tokens;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Handle tool calls or regular response
+    if (assistantMessage.tool_calls) {
+        tab.messages.push({
+            role: 'assistant',
+            content: assistantMessage.content || '',
+            tool_calls: assistantMessage.tool_calls,
+            tokens: usage?.completion_tokens || 0
+        });
+        renderMessages();
+
+        for (const toolCall of assistantMessage.tool_calls) {
+            const toolResult = simulateTool(toolCall);
+            tab.messages.push({
+                role: 'tool',
+                content: JSON.stringify(toolResult),
+                tool_call_id: toolCall.id
+            });
+        }
+        saveToStorage();
+        renderMessages();
+        hideStatus();
+    } else {
+        tab.messages.push({
+            role: 'assistant',
+            content: assistantMessage.content,
+            tokens: usage?.completion_tokens || 0
+        });
+        saveToStorage();
+        renderMessages();
+        updateGeneratedCode();
+        hideStatus();
+    }
+}
+
+// --- STREAMING RESPONSE HANDLER ---
+async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
+    const response = await fetch('/api/proxy-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            targetUrl: endpointUrl,
+            apiKey: model.apiKey.trim(),
+            body: requestBody
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
+    }
+
+    // Create placeholder message for streaming
+    tab.messages.push({ role: 'assistant', content: '' });
+    const msgIndex = tab.messages.length - 1;
+    renderMessages();
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                // Try parsing as OpenAI SSE format (data: {...})
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.slice(6).trim();
+                    if (jsonStr === '[DONE]') continue;
+                    try {
+                        const chunk = JSON.parse(jsonStr);
+                        const delta = chunk.choices?.[0]?.delta?.content;
+                        if (delta) {
+                            tab.messages[msgIndex].content += delta;
+                            renderSingleMessage(msgIndex);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse OpenAI chunk:', e);
+                    }
+                } else {
+                    // Try parsing as Ollama NDJSON format
+                    try {
+                        const chunk = JSON.parse(line);
+                        if (chunk.message?.content) {
+                            tab.messages[msgIndex].content += chunk.message.content;
+                            renderSingleMessage(msgIndex);
+                        }
+                        // Handle done state for token counts
+                        if (chunk.done && chunk.eval_count) {
+                            tab.messages[msgIndex].tokens = chunk.eval_count;
+                            tab.tokenUsage = (tab.tokenUsage || 0) +
+                                (chunk.prompt_eval_count || 0) + (chunk.eval_count || 0);
+                            const tokenDisplay = document.getElementById('tokenUsage');
+                            if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
+                        }
+                    } catch (e) {
+                        // Not valid JSON, skip
+                        console.warn('Failed to parse Ollama chunk:', line);
+                    }
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+
+    saveToStorage();
+    hideStatus();
 }
 
 function simulateTool(toolCall) {
