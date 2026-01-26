@@ -667,6 +667,9 @@ async function sendMessage(isRegen = false) {
     // Detect if this is an Ollama endpoint (not ending with /v1)
     const isOllama = !model.baseUrl.trim().replace(/\/+$/, '').endsWith('/v1');
 
+    // Detect if this is a Lightning.ai endpoint (uses max_completion_tokens instead of max_tokens)
+    const isLightningAI = model.baseUrl.toLowerCase().includes('lightning.ai');
+
     // Use the per-model vision setting
     const isVisionModel = model.isVision || false;
 
@@ -681,9 +684,15 @@ async function sendMessage(isRegen = false) {
         model: model.name,
         messages: apiMessages,
         temperature: model.temperature,
-        max_tokens: model.maxTokens,
         stream: enableStreaming
     };
+
+    // Lightning.ai uses max_completion_tokens, others use max_tokens
+    if (isLightningAI) {
+        requestBody.max_completion_tokens = model.maxTokens;
+    } else {
+        requestBody.max_tokens = model.maxTokens;
+    }
 
     // 3. Add Tools if enabled
     if (els.enableTools.checked) {
@@ -1141,6 +1150,9 @@ function updateGeneratedCode() {
     const fullUrl = normalizeUrl(model.baseUrl);
     const apiKey = model.apiKey.trim();
 
+    // Detect if this is a Lightning.ai endpoint
+    const isLightningAI = model.baseUrl.toLowerCase().includes('lightning.ai');
+
     // Prepare messages correctly (system + history)
     const apiMessages = [];
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
@@ -1159,9 +1171,16 @@ function updateGeneratedCode() {
     const payload = {
         model: model.name,
         messages: apiMessages,
-        temperature: model.temperature,
-        max_tokens: model.maxTokens
+        temperature: model.temperature
     };
+
+    // Lightning.ai uses max_completion_tokens, others use max_tokens
+    if (isLightningAI) {
+        payload.max_completion_tokens = model.maxTokens;
+    } else {
+        payload.max_tokens = model.maxTokens;
+    }
+
     if (tools) {
         payload.tools = tools;
         payload.tool_choice = "auto";
