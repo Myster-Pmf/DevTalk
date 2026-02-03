@@ -240,6 +240,28 @@ return {
                 </div>
                 <input type="file" id="importFile" accept=".json" style="display: none;">
 
+                <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
+
+                <!-- Advanced Options -->
+                <div class="input-group">
+                    <label style="font-weight: bold; margin-bottom: 8px;">Advanced Options</label>
+
+                    <div class="checkbox-group" style="margin-bottom: 8px;">
+                        <input type="checkbox" id="enableProxy" checked>
+                        <label for="enableProxy">Server-side proxy <span
+                                style="color: #4caf50; font-size: 11px;">(recommended)</span></label>
+                    </div>
+                    <p style="font-size: 11px; color: #888; margin: 0 0 12px 24px;">Routes requests through server to
+                        avoid CORS issues</p>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="skipProxyForLocal" checked>
+                        <label for="skipProxyForLocal">Always skip proxy for local server</label>
+                    </div>
+                    <p style="font-size: 11px; color: #888; margin: 0 0 0 24px;">Bypass proxy for localhost, 127.0.0.1,
+                        and local network URLs</p>
+                </div>
+
                 <div class="sidebar-footer">
                     <a href="https://github.com/Myster-Pmf/DevTalk" target="_blank" class="github-link">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"

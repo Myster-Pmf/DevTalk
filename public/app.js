@@ -188,6 +188,15 @@ function init() {
         renderMessages();
     };
 
+    // Proxy Settings Events
+    document.getElementById('enableProxy').onchange = () => {
+        saveToStorage();
+        updateGeneratedCode();
+    };
+    document.getElementById('skipProxyForLocal').onchange = () => {
+        saveToStorage();
+    };
+
     // Mobile Sidebar Toggles
     document.getElementById('btnToggleLeft').onclick = () => toggleSidebar('left');
     document.getElementById('btnToggleRight').onclick = () => toggleSidebar('right');
@@ -252,6 +261,13 @@ function loadFromStorage() {
             if (data.enableStreaming !== undefined) {
                 document.getElementById('enableStreaming').checked = data.enableStreaming;
             }
+            // Proxy settings (default to true if not set)
+            if (data.enableProxy !== undefined) {
+                document.getElementById('enableProxy').checked = data.enableProxy;
+            }
+            if (data.skipProxyForLocal !== undefined) {
+                document.getElementById('skipProxyForLocal').checked = data.skipProxyForLocal;
+            }
         } catch (e) { console.error("Storage Error", e); }
     }
 }
@@ -265,6 +281,8 @@ function saveToStorage() {
     const toolCode = document.getElementById('toolCodeEditor').value;
     const enableMarkdown = document.getElementById('enableMarkdown').checked;
     const enableStreaming = document.getElementById('enableStreaming').checked;
+    const enableProxy = document.getElementById('enableProxy').checked;
+    const skipProxyForLocal = document.getElementById('skipProxyForLocal').checked;
 
     localStorage.setItem('chatPlayground_v3', JSON.stringify({
         models,
@@ -274,7 +292,9 @@ function saveToStorage() {
         tools: currentTools,
         toolCode: toolCode,
         enableMarkdown: enableMarkdown,
-        enableStreaming: enableStreaming
+        enableStreaming: enableStreaming,
+        enableProxy: enableProxy,
+        skipProxyForLocal: skipProxyForLocal
     }));
 }
 
@@ -584,6 +604,44 @@ function normalizeUrl(baseUrl) {
     return cleaned;
 }
 
+// Helper to detect local URLs (localhost, 127.0.0.1, local network)
+function isLocalUrl(url) {
+    try {
+        const parsed = new URL(url);
+        const hostname = parsed.hostname.toLowerCase();
+        return (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '::1' ||
+            hostname.endsWith('.local') ||
+            hostname.endsWith('.localhost') ||
+            /^192\.168\.\d+\.\d+$/.test(hostname) ||
+            /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+            /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname)
+        );
+    } catch {
+        return false;
+    }
+}
+
+// Helper to determine if proxy should be used for a given URL
+function shouldUseProxy(url) {
+    const enableProxy = document.getElementById('enableProxy').checked;
+    const skipProxyForLocal = document.getElementById('skipProxyForLocal').checked;
+
+    // If proxy is disabled, never use it
+    if (!enableProxy) {
+        return false;
+    }
+
+    // If skip for local is enabled and URL is local, skip proxy
+    if (skipProxyForLocal && isLocalUrl(url)) {
+        return false;
+    }
+
+    return true;
+}
+
 // Helper to strip extra fields (like 'tokens') before sending to AI providers
 // isOllama: if true, use Ollama's image format (separate images array)
 // isVisionModel: if false, strip images and flatten array content to text
@@ -722,15 +780,31 @@ async function sendMessage(isRegen = false) {
 
 // --- NON-STREAMING RESPONSE HANDLER ---
 async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) {
-    const response = await fetch('/api/proxy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            targetUrl: endpointUrl,
-            apiKey: model.apiKey.trim(),
-            body: requestBody
-        })
-    });
+    let response;
+
+    if (shouldUseProxy(endpointUrl)) {
+        // Use server-side proxy
+        response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                targetUrl: endpointUrl,
+                apiKey: model.apiKey.trim(),
+                body: requestBody
+            })
+        });
+    } else {
+        // Direct API call (no proxy)
+        const headers = { 'Content-Type': 'application/json' };
+        if (model.apiKey.trim()) {
+            headers['Authorization'] = `Bearer ${model.apiKey.trim()}`;
+        }
+        response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+        });
+    }
 
     const responseText = await response.text();
     let data;
@@ -820,15 +894,31 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) 
 
 // --- STREAMING RESPONSE HANDLER ---
 async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
-    const response = await fetch('/api/proxy-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            targetUrl: endpointUrl,
-            apiKey: model.apiKey.trim(),
-            body: requestBody
-        })
-    });
+    let response;
+
+    if (shouldUseProxy(endpointUrl)) {
+        // Use server-side proxy for streaming
+        response = await fetch('/api/proxy-stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                targetUrl: endpointUrl,
+                apiKey: model.apiKey.trim(),
+                body: requestBody
+            })
+        });
+    } else {
+        // Direct streaming API call (no proxy)
+        const headers = { 'Content-Type': 'application/json' };
+        if (model.apiKey.trim()) {
+            headers['Authorization'] = `Bearer ${model.apiKey.trim()}`;
+        }
+        response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+        });
+    }
 
     if (!response.ok) {
         const errorText = await response.text();
