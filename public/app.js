@@ -651,22 +651,43 @@ function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) 
 
         // Handle content (can be string or array with images)
         if (Array.isArray(m.content)) {
+            // Extract text from both OpenAI and Gemini formats
+            const textParts = [];
+            let userImageCount = 0;
+            let generatedImageCount = 0;
+
+            for (const part of m.content) {
+                // OpenAI format: { type: 'text', text: '...' }
+                if (part.type === 'text' && part.text) {
+                    textParts.push(part.text);
+                }
+                // Gemini native format: { text: '...' }
+                else if (part.text && !part.type) {
+                    textParts.push(part.text);
+                }
+                // User-uploaded image (image_url)
+                else if (part.type === 'image_url') {
+                    userImageCount++;
+                }
+                // Generated image (inline_data)
+                else if (part.inline_data) {
+                    generatedImageCount++;
+                }
+            }
+
             if (!isVisionModel) {
                 // Non-vision model: flatten to text, add placeholder for images
-                const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
-                const imageCount = m.content.filter(p => p.type === 'image_url').length;
-
                 let content = textParts.join('\n') || '';
-                if (imageCount > 0) {
-                    const imagePlaceholder = imageCount === 1
+                const totalImages = userImageCount + generatedImageCount;
+                if (totalImages > 0) {
+                    const imagePlaceholder = totalImages === 1
                         ? '[An image was shared but this model cannot view images]'
-                        : `[${imageCount} images were shared but this model cannot view images]`;
+                        : `[${totalImages} images were shared but this model cannot view images]`;
                     content = content ? `${content}\n\n${imagePlaceholder}` : imagePlaceholder;
                 }
                 cleanMsg.content = content;
             } else if (isOllama) {
                 // Ollama format: content is string, images are separate base64 array
-                const textParts = m.content.filter(p => p.type === 'text').map(p => p.text);
                 cleanMsg.content = textParts.join('\n') || '';
 
                 const imageParts = m.content.filter(p => p.type === 'image_url' && p.image_url?.url);
@@ -678,9 +699,28 @@ function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) 
                         return base64Match ? base64Match[1] : url;
                     });
                 }
+                // Note: Generated images (inline_data) are NOT sent back to Ollama
             } else {
-                // OpenAI vision format: keep array as-is
-                cleanMsg.content = m.content;
+                // OpenAI vision format: filter out generated images (inline_data) 
+                // Only keep text and user-uploaded images
+                const filteredContent = m.content.filter(part => {
+                    // Keep text parts
+                    if (part.type === 'text' || (part.text && !part.type)) return true;
+                    // Keep user-uploaded images
+                    if (part.type === 'image_url') return true;
+                    // Skip generated images (inline_data)
+                    return false;
+                });
+
+                // If only generated images were present, convert to text placeholder
+                if (filteredContent.length === 0 && generatedImageCount > 0) {
+                    cleanMsg.content = `[Generated ${generatedImageCount} image(s)]`;
+                } else if (filteredContent.length === 1 && typeof filteredContent[0].text === 'string') {
+                    // Simplify if only text remains
+                    cleanMsg.content = filteredContent[0].text;
+                } else {
+                    cleanMsg.content = filteredContent;
+                }
             }
         } else {
             cleanMsg.content = m.content || '';
@@ -824,14 +864,28 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) 
         throw new Error(errorMsg);
     }
 
-    // Handle OpenAI or Ollama format
+    // Handle OpenAI, Ollama, or Gemini native format
     let assistantMessage;
     let usage;
 
     if (data.choices && data.choices[0] && data.choices[0].message) {
+        // OpenAI-compatible format
         assistantMessage = data.choices[0].message;
         usage = data.usage;
+    } else if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        // Gemini native format - convert parts to compatible format
+        const parts = data.candidates[0].content.parts || [];
+        assistantMessage = {
+            role: 'assistant',
+            content: parts // Store parts array directly for multimodal support
+        };
+        usage = data.usageMetadata ? {
+            total_tokens: (data.usageMetadata.promptTokenCount || 0) + (data.usageMetadata.candidatesTokenCount || 0),
+            prompt_tokens: data.usageMetadata.promptTokenCount || 0,
+            completion_tokens: data.usageMetadata.candidatesTokenCount || 0
+        } : null;
     } else if (data.message) {
+        // Ollama format
         assistantMessage = data.message;
         usage = {
             total_tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
@@ -1661,26 +1715,43 @@ function formatMessageContent(text, images) {
     return content;
 }
 
-// Render image content in chat messages
+// Render image content in chat messages (supports both image_url and inline_data formats)
 function renderImageContent(content) {
     if (typeof content === 'string') return '';
     if (!Array.isArray(content)) return '';
 
     let html = '';
     for (const part of content) {
+        // OpenAI-compatible format (image_url)
         if (part.type === 'image_url' && part.image_url?.url) {
             html += `<img src="${part.image_url.url}" class="message-image" onclick="window.open(this.src, '_blank')">`;
+        }
+        // Gemini native format (inline_data)
+        else if (part.inline_data && part.inline_data.data) {
+            const mimeType = part.inline_data.mime_type || 'image/png';
+            const dataUrl = `data:${mimeType};base64,${part.inline_data.data}`;
+            html += `<img src="${dataUrl}" class="message-image" onclick="window.open(this.src, '_blank')">`;
         }
     }
     return html;
 }
 
-// Extract text from content (string or array)
+// Extract text from content (string or array, supports both OpenAI and Gemini formats)
 function getTextFromContent(content) {
     if (typeof content === 'string') return content;
     if (!Array.isArray(content)) return '';
 
-    const textParts = content.filter(p => p.type === 'text').map(p => p.text);
+    const textParts = [];
+    for (const part of content) {
+        // OpenAI format: { type: 'text', text: '...' }
+        if (part.type === 'text' && part.text) {
+            textParts.push(part.text);
+        }
+        // Gemini native format: { text: '...' } (without type wrapper)
+        else if (part.text && !part.type) {
+            textParts.push(part.text);
+        }
+    }
     return textParts.join('\n');
 }
 
