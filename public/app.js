@@ -67,6 +67,66 @@ let currentTools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
 // Pending images for next message (base64 data URLs)
 let pendingImages = [];
 
+function isAssistantMessage(msg) {
+    return msg && msg.role === 'assistant';
+}
+
+function createAssistantVersion({
+    content = '',
+    tool_calls = null,
+    tokens = 0,
+    metadata = {}
+} = {}) {
+    return {
+        id: Date.now() + Math.random(),
+        content,
+        tool_calls: tool_calls || null,
+        tokens,
+        metadata: metadata || {}
+    };
+}
+
+function ensureAssistantVersionShape(msg) {
+    if (!isAssistantMessage(msg)) return msg;
+
+    if (!Array.isArray(msg.versions) || msg.versions.length === 0) {
+        msg.versions = [createAssistantVersion({
+            content: msg.content || '',
+            tool_calls: msg.tool_calls || null,
+            tokens: msg.tokens || 0,
+            metadata: msg.metadata || {}
+        })];
+        msg.activeVersionIndex = 0;
+    }
+
+    if (
+        typeof msg.activeVersionIndex !== 'number' ||
+        msg.activeVersionIndex < 0 ||
+        msg.activeVersionIndex >= msg.versions.length
+    ) {
+        msg.activeVersionIndex = msg.versions.length - 1;
+    }
+
+    const activeVersion = msg.versions[msg.activeVersionIndex];
+    msg.content = activeVersion.content;
+    msg.tool_calls = activeVersion.tool_calls || null;
+    msg.tokens = activeVersion.tokens || 0;
+    msg.metadata = activeVersion.metadata || {};
+
+    return msg;
+}
+
+function normalizeTabMessageShapes(tab) {
+    if (!tab || !Array.isArray(tab.messages)) return;
+    tab.messages = tab.messages.map(msg => ensureAssistantVersionShape(msg));
+}
+
+function getActiveAssistantVersion(msg) {
+    if (!isAssistantMessage(msg)) return null;
+    ensureAssistantVersionShape(msg);
+    return msg.versions[msg.activeVersionIndex] || null;
+}
+
 // --- DOM ELEMENTS ---
 const els = {
     apiKey: document.getElementById('apiKey'),
@@ -247,6 +307,7 @@ function loadFromStorage() {
             models = data.models || [];
             activeModelIndex = data.activeModelIndex;
             chatTabs = data.chatTabs || [];
+            chatTabs.forEach(normalizeTabMessageShapes);
             activeTabIndex = data.activeTabIndex || 0;
             if (data.tools) {
                 currentTools = data.tools;
@@ -504,6 +565,7 @@ function createNewTab() {
 function switchTab(index) {
     activeTabIndex = index;
     const tab = chatTabs[index];
+    normalizeTabMessageShapes(tab);
 
     // 1. Load System Prompt specific to this tab
     if (els.systemPrompt) els.systemPrompt.value = tab.systemPrompt || '';
@@ -647,6 +709,10 @@ function shouldUseProxy(url) {
 // isVisionModel: if false, strip images and flatten array content to text
 function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) {
     return messages.map(m => {
+        if (isAssistantMessage(m)) {
+            ensureAssistantVersionShape(m);
+        }
+
         const cleanMsg = { role: m.role };
 
         // Handle content (can be string or array with images)
@@ -1109,6 +1175,9 @@ function simulateTool(toolCall) {
 
 function renderMessages() {
     const messages = chatTabs[activeTabIndex]?.messages || [];
+    messages.forEach(msg => {
+        if (isAssistantMessage(msg)) ensureAssistantVersionShape(msg);
+    });
     els.messages.innerHTML = messages.map((msg, i) => renderMessageHTML(msg, i)).join('');
 
     // Post-process for HighlightJS and Copy Buttons
@@ -1222,6 +1291,7 @@ function processMessageContent(specificEl) {
 function renderSingleMessage(index) {
     const tab = chatTabs[activeTabIndex];
     if (!tab || !tab.messages[index]) return;
+    if (isAssistantMessage(tab.messages[index])) ensureAssistantVersionShape(tab.messages[index]);
 
     const container = document.getElementById(`msg-container-${index}`);
     if (!container) return;
@@ -1252,6 +1322,7 @@ function updateTokenHistoryEstimate() {
     // Sum up stored token counts from messages
     if (tab.messages) {
         tab.messages.forEach(msg => {
+            if (isAssistantMessage(msg)) ensureAssistantVersionShape(msg);
             if (msg.tokens !== undefined) {
                 totalTokens += msg.tokens;
                 hasStoredTokens = true;
