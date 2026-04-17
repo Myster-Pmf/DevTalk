@@ -127,6 +127,29 @@ function getActiveAssistantVersion(msg) {
     return msg.versions[msg.activeVersionIndex] || null;
 }
 
+function appendAssistantVersion(msg, versionData) {
+    ensureAssistantVersionShape(msg);
+    msg.versions.push(createAssistantVersion(versionData));
+    msg.activeVersionIndex = msg.versions.length - 1;
+    return ensureAssistantVersionShape(msg);
+}
+
+function upsertAssistantMessage(tab, targetIndex, versionData) {
+    if (typeof targetIndex === 'number' && tab.messages[targetIndex] && isAssistantMessage(tab.messages[targetIndex])) {
+        appendAssistantVersion(tab.messages[targetIndex], versionData);
+        return targetIndex;
+    }
+
+    const assistantMessage = ensureAssistantVersionShape({
+        role: 'assistant',
+        versions: [createAssistantVersion(versionData)],
+        activeVersionIndex: 0
+    });
+
+    tab.messages.push(assistantMessage);
+    return tab.messages.length - 1;
+}
+
 // --- DOM ELEMENTS ---
 const els = {
     apiKey: document.getElementById('apiKey'),
@@ -798,7 +821,7 @@ function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) 
     });
 }
 
-async function sendMessage(isRegen = false) {
+async function sendMessage(isRegen = false, regenTargetIndex = null) {
     const tab = chatTabs[activeTabIndex];
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
 
@@ -837,7 +860,10 @@ async function sendMessage(isRegen = false) {
     // Use the per-model vision setting
     const isVisionModel = model.isVision || false;
 
-    const history = prepareCleanMessages(tab.messages, isOllama, isVisionModel);
+    const historySource = (isRegen === true && regenTargetIndex !== null)
+        ? tab.messages.slice(0, regenTargetIndex)
+        : tab.messages;
+    const history = prepareCleanMessages(historySource, isOllama, isVisionModel);
     const apiMessages = [];
     if (tab.systemPrompt) apiMessages.push({ role: 'system', content: tab.systemPrompt });
     apiMessages.push(...history);
@@ -873,10 +899,10 @@ async function sendMessage(isRegen = false) {
     try {
         if (enableStreaming) {
             // --- STREAMING MODE ---
-            await handleStreamingResponse(tab, model, endpointUrl, requestBody);
+            await handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex);
         } else {
             // --- NON-STREAMING MODE ---
-            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody);
+            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex);
         }
     } catch (error) {
         showStatus(`Error: ${error.message}`, 'error');
@@ -885,7 +911,7 @@ async function sendMessage(isRegen = false) {
 }
 
 // --- NON-STREAMING RESPONSE HANDLER ---
-async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) {
+async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null) {
     let response;
 
     if (shouldUseProxy(endpointUrl)) {
@@ -980,8 +1006,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) 
 
     // Handle tool calls or regular response
     if (assistantMessage.tool_calls) {
-        tab.messages.push({
-            role: 'assistant',
+        upsertAssistantMessage(tab, regenTargetIndex, {
             content: assistantMessage.content || '',
             tool_calls: assistantMessage.tool_calls,
             tokens: usage?.completion_tokens || 0
@@ -1000,8 +1025,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) 
         renderMessages();
         hideStatus();
     } else {
-        tab.messages.push({
-            role: 'assistant',
+        upsertAssistantMessage(tab, regenTargetIndex, {
             content: assistantMessage.content,
             tokens: usage?.completion_tokens || 0
         });
@@ -1013,7 +1037,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody) 
 }
 
 // --- STREAMING RESPONSE HANDLER ---
-async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
+async function handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null) {
     let response;
 
     if (shouldUseProxy(endpointUrl)) {
@@ -1055,8 +1079,7 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
     }
 
     // Create placeholder message for streaming
-    tab.messages.push({ role: 'assistant', content: '' });
-    const msgIndex = tab.messages.length - 1;
+    const msgIndex = upsertAssistantMessage(tab, regenTargetIndex, { content: '' });
     renderMessages();
 
     const reader = response.body.getReader();
@@ -1083,8 +1106,12 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
                         const chunk = JSON.parse(jsonStr);
                         const delta = chunk.choices?.[0]?.delta?.content;
                         if (delta) {
-                            tab.messages[msgIndex].content += delta;
-                            renderSingleMessage(msgIndex);
+                            const activeVersion = getActiveAssistantVersion(tab.messages[msgIndex]);
+                            if (activeVersion) {
+                                activeVersion.content += delta;
+                                ensureAssistantVersionShape(tab.messages[msgIndex]);
+                                renderSingleMessage(msgIndex);
+                            }
                         }
                     } catch (e) {
                         console.warn('Failed to parse OpenAI chunk:', e);
@@ -1094,12 +1121,20 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody) {
                     try {
                         const chunk = JSON.parse(line);
                         if (chunk.message?.content) {
-                            tab.messages[msgIndex].content += chunk.message.content;
-                            renderSingleMessage(msgIndex);
+                            const activeVersion = getActiveAssistantVersion(tab.messages[msgIndex]);
+                            if (activeVersion) {
+                                activeVersion.content += chunk.message.content;
+                                ensureAssistantVersionShape(tab.messages[msgIndex]);
+                                renderSingleMessage(msgIndex);
+                            }
                         }
                         // Handle done state for token counts
                         if (chunk.done && chunk.eval_count) {
-                            tab.messages[msgIndex].tokens = chunk.eval_count;
+                            const activeVersion = getActiveAssistantVersion(tab.messages[msgIndex]);
+                            if (activeVersion) {
+                                activeVersion.tokens = chunk.eval_count;
+                                ensureAssistantVersionShape(tab.messages[msgIndex]);
+                            }
                             tab.tokenUsage = (tab.tokenUsage || 0) +
                                 (chunk.prompt_eval_count || 0) + (chunk.eval_count || 0);
                             const tokenDisplay = document.getElementById('tokenUsage');
@@ -1485,7 +1520,15 @@ function finishEditing(index, newContent) {
     const messages = tab.messages;
 
     if (messages[index] && messages[index].content !== newContent) {
-        messages[index].content = newContent;
+        if (isAssistantMessage(messages[index])) {
+            const activeVersion = getActiveAssistantVersion(messages[index]);
+            if (activeVersion) {
+                activeVersion.content = newContent;
+                ensureAssistantVersionShape(messages[index]);
+            }
+        } else {
+            messages[index].content = newContent;
+        }
         saveToStorage();
         updateGeneratedCode();
     }
@@ -1569,11 +1612,12 @@ function regenerateMessage(index) {
         return;
     }
 
-    // Truncate messages up to this point (excluding this assistant message)
-    tab.messages = tab.messages.slice(0, index);
+    // Truncate later history, but keep this assistant slot so we can add a new version to it.
+    tab.messages = tab.messages.slice(0, index + 1);
+    tab.messages[index] = ensureAssistantVersionShape(tab.messages[index]);
     saveToStorage();
     renderMessages();
-    sendMessage(true);
+    sendMessage(true, index);
 }
 
 function resendFromMessage(index) {
