@@ -523,6 +523,13 @@ button.danger:hover {
     margin-bottom: 6px;
 }
 
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
 .message-role {
     display: inline-flex;
     align-items: center;
@@ -535,6 +542,43 @@ button.danger:hover {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
+}
+
+.message-versions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #0d141d;
+}
+
+.version-nav-btn {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.version-nav-btn:hover {
+    background: #162131;
+    color: var(--text);
+}
+
+.version-indicator {
+    min-width: 34px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
 }
 
 .message-actions {

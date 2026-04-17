@@ -127,6 +127,12 @@ function getActiveAssistantVersion(msg) {
     return msg.versions[msg.activeVersionIndex] || null;
 }
 
+function getAssistantVersionCount(msg) {
+    if (!isAssistantMessage(msg)) return 0;
+    ensureAssistantVersionShape(msg);
+    return msg.versions.length;
+}
+
 function appendAssistantVersion(msg, versionData) {
     ensureAssistantVersionShape(msg);
     msg.versions.push(createAssistantVersion(versionData));
@@ -1237,6 +1243,11 @@ function renderMessageHTML(msg, i) {
     let contentDisplay = '';
     let isTool = msg.role === 'tool';
     let isUser = msg.role === 'user';
+    const isAssistant = msg.role === 'assistant';
+
+    if (isAssistant) {
+        ensureAssistantVersionShape(msg);
+    }
 
     // Handle Tool Calls Display
     if (msg.tool_calls) {
@@ -1283,12 +1294,25 @@ function renderMessageHTML(msg, i) {
     const resendIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
 
     const roleDisplay = msg.role.toUpperCase();
-    const isAssistant = msg.role === 'assistant';
+    const versionCount = isAssistant ? getAssistantVersionCount(msg) : 0;
+    const activeVersionIndex = isAssistant ? msg.activeVersionIndex || 0 : 0;
+    const versionControls = isAssistant && versionCount > 1
+        ? `
+            <div class="message-versions">
+                <button class="version-nav-btn" title="Previous version" onclick="event.stopPropagation(); switchAssistantVersion(${i}, -1)">&lt;</button>
+                <span class="version-indicator">${activeVersionIndex + 1} / ${versionCount}</span>
+                <button class="version-nav-btn" title="Next version" onclick="event.stopPropagation(); switchAssistantVersion(${i}, 1)">&gt;</button>
+            </div>
+        `
+        : '';
 
     return `
         <div class="message" id="msg-container-${i}">
             <div class="message-header">
-                <span class="message-role">${roleDisplay}</span>
+                <div class="message-meta">
+                    <span class="message-role">${roleDisplay}</span>
+                    ${versionControls}
+                </div>
                 <div class="message-actions">
                      <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
                      ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
@@ -1553,6 +1577,25 @@ function focusMessage(index) {
 function updateMessageContent(index, newContent) {
     // This is now handled by finishEditing, but keeping signature for safety if called elsewhere
     finishEditing(index, newContent);
+}
+
+function switchAssistantVersion(index, direction) {
+    const tab = chatTabs[activeTabIndex];
+    const msg = tab?.messages?.[index];
+    if (!msg || !isAssistantMessage(msg)) return;
+
+    ensureAssistantVersionShape(msg);
+    const total = msg.versions.length;
+    if (total <= 1) return;
+
+    const nextIndex = msg.activeVersionIndex + direction;
+    if (nextIndex < 0 || nextIndex >= total) return;
+
+    msg.activeVersionIndex = nextIndex;
+    ensureAssistantVersionShape(msg);
+    saveToStorage();
+    renderSingleMessage(index);
+    updateGeneratedCode();
 }
 
 function prepareForEdit(index) {
