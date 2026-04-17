@@ -156,6 +156,38 @@ function upsertAssistantMessage(tab, targetIndex, versionData) {
     return tab.messages.length - 1;
 }
 
+function getProviderLabel(model) {
+    const baseUrl = (model?.baseUrl || '').toLowerCase();
+    if (baseUrl.includes('lightning.ai')) return 'Lightning AI';
+    if (baseUrl.includes('openai.com')) return 'OpenAI-compatible';
+    if (baseUrl.includes('ollama')) return 'Ollama';
+    return 'Custom';
+}
+
+function buildResponseMetadata(model, requestMetrics, usage = {}) {
+    const durationMs = Math.max(0, Math.round(performance.now() - requestMetrics.startedPerf));
+    const completionTokens = usage.completion_tokens ?? null;
+    const promptTokens = usage.prompt_tokens ?? null;
+    const totalTokens = usage.total_tokens ?? null;
+    const tokensPerSecond = (completionTokens && durationMs > 0)
+        ? Number((completionTokens / (durationMs / 1000)).toFixed(2))
+        : null;
+
+    return {
+        modelName: model.name,
+        baseUrl: model.baseUrl,
+        provider: getProviderLabel(model),
+        streamed: !!requestMetrics.streamed,
+        startedAt: requestMetrics.startedAt,
+        completedAt: new Date().toISOString(),
+        durationMs,
+        promptTokens,
+        completionTokens,
+        totalTokens,
+        tokensPerSecond
+    };
+}
+
 // --- DOM ELEMENTS ---
 const els = {
     apiKey: document.getElementById('apiKey'),
@@ -902,13 +934,19 @@ async function sendMessage(isRegen = false, regenTargetIndex = null) {
         }
     }
 
+    const requestMetrics = {
+        startedAt: new Date().toISOString(),
+        startedPerf: performance.now(),
+        streamed: enableStreaming
+    };
+
     try {
         if (enableStreaming) {
             // --- STREAMING MODE ---
-            await handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex);
+            await handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex, requestMetrics);
         } else {
             // --- NON-STREAMING MODE ---
-            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex);
+            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex, requestMetrics);
         }
     } catch (error) {
         showStatus(`Error: ${error.message}`, 'error');
@@ -917,7 +955,7 @@ async function sendMessage(isRegen = false, regenTargetIndex = null) {
 }
 
 // --- NON-STREAMING RESPONSE HANDLER ---
-async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null) {
+async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null, requestMetrics = null) {
     let response;
 
     if (shouldUseProxy(endpointUrl)) {
@@ -1012,10 +1050,16 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, 
 
     // Handle tool calls or regular response
     if (assistantMessage.tool_calls) {
+        const responseMetadata = buildResponseMetadata(model, requestMetrics || {
+            startedAt: new Date().toISOString(),
+            startedPerf: performance.now(),
+            streamed: false
+        }, usage || {});
         upsertAssistantMessage(tab, regenTargetIndex, {
             content: assistantMessage.content || '',
             tool_calls: assistantMessage.tool_calls,
-            tokens: usage?.completion_tokens || 0
+            tokens: usage?.completion_tokens || 0,
+            metadata: responseMetadata
         });
         renderMessages();
 
@@ -1031,9 +1075,15 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, 
         renderMessages();
         hideStatus();
     } else {
+        const responseMetadata = buildResponseMetadata(model, requestMetrics || {
+            startedAt: new Date().toISOString(),
+            startedPerf: performance.now(),
+            streamed: false
+        }, usage || {});
         upsertAssistantMessage(tab, regenTargetIndex, {
             content: assistantMessage.content,
-            tokens: usage?.completion_tokens || 0
+            tokens: usage?.completion_tokens || 0,
+            metadata: responseMetadata
         });
         saveToStorage();
         renderMessages();
@@ -1043,7 +1093,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, 
 }
 
 // --- STREAMING RESPONSE HANDLER ---
-async function handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null) {
+async function handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null, requestMetrics = null) {
     let response;
 
     if (shouldUseProxy(endpointUrl)) {
@@ -1084,8 +1134,24 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
         }
     }
 
+    let streamUsage = {
+        prompt_tokens: null,
+        completion_tokens: null,
+        total_tokens: null
+    };
+    let streamUsageApplied = false;
+
     // Create placeholder message for streaming
-    const msgIndex = upsertAssistantMessage(tab, regenTargetIndex, { content: '' });
+    const msgIndex = upsertAssistantMessage(tab, regenTargetIndex, {
+        content: '',
+        metadata: {
+            modelName: model.name,
+            baseUrl: model.baseUrl,
+            provider: getProviderLabel(model),
+            streamed: true,
+            startedAt: requestMetrics?.startedAt || new Date().toISOString()
+        }
+    });
     renderMessages();
 
     const reader = response.body.getReader();
@@ -1119,6 +1185,13 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
                                 renderSingleMessage(msgIndex);
                             }
                         }
+                        if (chunk.usage) {
+                            streamUsage = {
+                                prompt_tokens: chunk.usage.prompt_tokens ?? null,
+                                completion_tokens: chunk.usage.completion_tokens ?? null,
+                                total_tokens: chunk.usage.total_tokens ?? null
+                            };
+                        }
                     } catch (e) {
                         console.warn('Failed to parse OpenAI chunk:', e);
                     }
@@ -1136,6 +1209,11 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
                         }
                         // Handle done state for token counts
                         if (chunk.done && chunk.eval_count) {
+                            streamUsage = {
+                                prompt_tokens: chunk.prompt_eval_count || 0,
+                                completion_tokens: chunk.eval_count || 0,
+                                total_tokens: (chunk.prompt_eval_count || 0) + (chunk.eval_count || 0)
+                            };
                             const activeVersion = getActiveAssistantVersion(tab.messages[msgIndex]);
                             if (activeVersion) {
                                 activeVersion.tokens = chunk.eval_count;
@@ -1145,6 +1223,7 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
                                 (chunk.prompt_eval_count || 0) + (chunk.eval_count || 0);
                             const tokenDisplay = document.getElementById('tokenUsage');
                             if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
+                            streamUsageApplied = true;
                         }
                     } catch (e) {
                         // Not valid JSON, skip
@@ -1157,7 +1236,34 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
         reader.releaseLock();
     }
 
+    const finalVersion = getActiveAssistantVersion(tab.messages[msgIndex]);
+    if (finalVersion) {
+        finalVersion.metadata = buildResponseMetadata(model, requestMetrics || {
+            startedAt: new Date().toISOString(),
+            startedPerf: performance.now(),
+            streamed: true
+        }, streamUsage);
+        finalVersion.tokens = streamUsage.completion_tokens || finalVersion.tokens || 0;
+        ensureAssistantVersionShape(tab.messages[msgIndex]);
+    }
+
+    if (!streamUsageApplied && streamUsage.total_tokens) {
+        tab.tokenUsage = (tab.tokenUsage || 0) + streamUsage.total_tokens;
+        const tokenDisplay = document.getElementById('tokenUsage');
+        if (tokenDisplay) tokenDisplay.textContent = tab.tokenUsage;
+    }
+
+    if (streamUsage.prompt_tokens) {
+        for (let i = tab.messages.length - 1; i >= 0; i--) {
+            if (tab.messages[i].role === 'user') {
+                tab.messages[i].tokens = streamUsage.prompt_tokens;
+                break;
+            }
+        }
+    }
+
     saveToStorage();
+    renderSingleMessage(msgIndex);
     hideStatus();
 }
 
