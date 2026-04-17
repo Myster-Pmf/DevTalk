@@ -4,10 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Model Playground</title>
+    <title>DevTalk Playground</title>
     <link rel="icon" type="image/svg+xml" href="assets/devtalk_logo.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <!-- Markdown & Highlight Support -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -16,15 +20,18 @@
 
 <body>
     <div id="mobileHeader" class="mobile-only-header">
-        <button id="btnToggleLeft" class="mobile-toggle-btn">
+        <button id="btnToggleLeft" class="mobile-toggle-btn" aria-label="Open model configuration">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
                 <line x1="3" y1="6" x2="21" y2="6"></line>
                 <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
         </button>
-        <div class="mobile-app-title">DevTalk</div>
-        <button id="btnToggleRight" class="mobile-toggle-btn">
+        <div class="mobile-app-title">
+            <span class="mobile-app-kicker">Workspace</span>
+            <span>DevTalk</span>
+        </div>
+        <button id="btnToggleRight" class="mobile-toggle-btn" aria-label="Open tools and options">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path
@@ -37,14 +44,16 @@
     <div id="sidePaneOverlay" class="panel-overlay"></div>
 
     <div class="container">
-        <!-- Left Panel: Model Configuration -->
         <div class="panel left-panel" id="leftPanel">
             <div class="mobile-panel-header mobile-only">
                 <h3>Model Config</h3>
-                <button class="close-panel-btn" onclick="toggleSidebar('left')">×</button>
+                <button class="close-panel-btn" onclick="toggleSidebar('left')">&times;</button>
             </div>
             <div class="panel-header">
-                Model Configuration
+                <div class="panel-header-copy">
+                    <span class="panel-eyebrow">Setup</span>
+                    <div>Model Configuration</div>
+                </div>
                 <div class="header-actions">
                     <button class="icon-btn" id="btnExportModels" title="Export Models">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -66,142 +75,182 @@
                 </div>
             </div>
             <div class="panel-content">
-                <div class="input-group">
-                    <label>API Key</label>
-                    <div class="api-key-container">
-                        <input type="password" id="apiKey" placeholder="sk-...">
-                        <button class="icon-btn" id="toggleApiKey" title="Show/Hide">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
+                <div class="panel-section panel-section-highlight">
+                    <div class="section-intro">
+                        <span class="section-kicker">Connection</span>
+                        <p>Configure credentials, target model, and prompt defaults for the active tab.</p>
                     </div>
-                </div>
 
-                <div class="input-group">
-                    <label>Model Name</label>
-                    <input type="text" id="modelName" placeholder="lightning-ai/gpt-oss-20b">
-                </div>
-
-                <div class="input-group">
-                    <label>Base URL</label>
-                    <input type="text" id="baseUrl" placeholder="https://lightning.ai/api/v1">
-                </div>
-
-                <div class="param-row">
                     <div class="input-group">
-                        <label>Temperature</label>
-                        <input type="number" id="temperature" value="0.7" step="0.1" min="0" max="2">
+                        <label>API Key</label>
+                        <div class="api-key-container">
+                            <input type="password" id="apiKey" placeholder="sk-...">
+                            <button class="icon-btn" id="toggleApiKey" title="Show or hide API key">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
+
                     <div class="input-group">
-                        <label>Max Tokens</label>
-                        <input type="number" id="maxTokens" value="2048" step="100">
+                        <label>Model Name</label>
+                        <input type="text" id="modelName" placeholder="lightning-ai/gpt-oss-20b">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Base URL</label>
+                        <input type="text" id="baseUrl" placeholder="https://lightning.ai/api/v1">
+                    </div>
+
+                    <div class="param-row">
+                        <div class="input-group">
+                            <label>Temperature</label>
+                            <input type="number" id="temperature" value="0.7" step="0.1" min="0" max="2">
+                        </div>
+                        <div class="input-group">
+                            <label>Max Tokens</label>
+                            <input type="number" id="maxTokens" value="2048" step="100">
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="isVisionModel">
+                        <label for="isVisionModel">Vision Model</label>
+                    </div>
+
+                    <div class="input-group">
+                        <label>System Prompt (For this Tab)</label>
+                        <textarea id="systemPrompt" style="min-height: 80px;" placeholder="System prompt..."></textarea>
+                    </div>
+
+                    <div class="btn-group">
+                        <button id="btnAddModel">Add Model</button>
+                        <button class="secondary" id="btnUpdateModel">Update</button>
                     </div>
                 </div>
 
-                <div class="checkbox-group" style="margin-top: 8px;">
-                    <input type="checkbox" id="isVisionModel">
-                    <label for="isVisionModel">Vision Model</label>
+                <div class="panel-section">
+                    <div class="section-intro">
+                        <span class="section-kicker">Library</span>
+                        <p>Save frequently used endpoints and switch them across tabs without re-entering details.</p>
+                    </div>
+                    <div class="model-list" id="modelList"></div>
                 </div>
-
-                <div class="input-group">
-                    <label>System Prompt (For this Tab)</label>
-                    <textarea id="systemPrompt" style="min-height: 80px;" placeholder="System prompt..."></textarea>
-                </div>
-
-                <div class="div-line" style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
-
-                <div class="btn-group">
-                    <button id="btnAddModel">Add Model</button>
-                    <button class="secondary" id="btnUpdateModel">Update</button>
-                </div>
-
-                <div class="model-list" id="modelList"></div>
             </div>
         </div>
 
-        <!-- Middle Panel: Chat -->
         <div class="panel middle-panel">
+            <div class="workspace-topbar">
+                <div class="workspace-copy">
+                    <span class="panel-eyebrow">Conversation</span>
+                    <h1>Prompt workspace</h1>
+                </div>
+                <div class="workspace-meta">Clean comparison space for prompts, tools, and model outputs</div>
+            </div>
             <div class="tabs" id="tabs"></div>
             <div class="chat-container">
                 <div class="messages" id="messages"></div>
 
                 <div class="input-area">
                     <div id="status" class="status" style="display: none;"></div>
-
-                    <!-- Image Preview Area -->
                     <div id="imagePreviewArea" class="image-preview-area" style="display: none;"></div>
 
-                    <div class="input-row">
-                        <button class="icon-btn attach-btn" id="btnAttachImage" title="Attach Image">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                <polyline points="21 15 16 10 5 21"></polyline>
-                            </svg>
-                        </button>
-                        <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
-                        <textarea id="userInput" placeholder="Type your message..."></textarea>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <button id="btnSend">Send</button>
-                            <button class="secondary" id="btnClear">Clear</button>
+                    <div class="composer-shell">
+                        <div class="composer-tools">
+                            <button class="icon-btn attach-btn" id="btnAttachImage" title="Attach image">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                            </button>
+                            <div class="composer-hint">Write a prompt, attach images if needed, then compare results across tabs.</div>
+                        </div>
+
+                        <div class="input-row">
+                            <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                            <textarea id="userInput" placeholder="Type your message..."></textarea>
+                            <div class="composer-actions">
+                                <button id="btnSend">Send</button>
+                                <button class="secondary" id="btnClear">Clear</button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right Panel: Tools & Options -->
         <div class="panel right-panel" id="rightPanel">
             <div class="mobile-panel-header mobile-only">
                 <h3>Tools & Options</h3>
-                <button class="close-panel-btn" onclick="toggleSidebar('right')">×</button>
+                <button class="close-panel-btn" onclick="toggleSidebar('right')">&times;</button>
             </div>
-            <div class="panel-header">Tools & Options</div>
+            <div class="panel-header">
+                <div class="panel-header-copy">
+                    <span class="panel-eyebrow">Inspect</span>
+                    <div>Tools & Options</div>
+                </div>
+            </div>
             <div class="panel-content">
-
-                <div class="input-group"
-                    style="margin-bottom: 16px; padding: 10px; background: #222; border-radius: 4px; text-align: center;">
-                    <label style="margin-bottom: 4px;">Total Token Usage (Tab)</label>
-                    <div id="tokenUsage" style="font-size: 16px; font-weight: bold; color: #4caf50;">0</div>
-                    <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
-                    <label style="margin-bottom: 4px;">Tokens (History)</label>
-                    <div id="tokenHistory" style="font-size: 16px; font-weight: bold; color: #2196f3;">0</div>
-                </div>
-
-                <!-- Tool Management -->
-                <div class="input-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enableTools">
-                        <label for="enableTools">Enable Tools</label>
+                <div class="panel-section panel-section-highlight usage-card">
+                    <div class="section-intro">
+                        <span class="section-kicker">Usage</span>
+                        <p>Monitor the active tab and full thread context while you iterate.</p>
                     </div>
-
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enableMarkdown" checked>
-                        <label for="enableMarkdown">Enable Markdown Rendering</label>
-                    </div>
-
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="enableStreaming">
-                        <label for="enableStreaming">Enable Streaming</label>
+                    <div class="usage-grid">
+                        <div class="usage-metric">
+                            <label>Total Token Usage (Tab)</label>
+                            <div id="tokenUsage">0</div>
+                        </div>
+                        <div class="usage-metric">
+                            <label>Tokens (History)</label>
+                            <div id="tokenHistory">0</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="input-group">
-                    <label>Tools JSON Definition (Edit Here)</label>
-                    <textarea id="toolsEditor" class="tool-json-input"></textarea>
-                    <div class="btn-group">
-                        <button class="secondary" id="btnResetTools">Reset to Default</button>
-                        <button class="secondary" id="btnFormatTools">Format JSON</button>
+                <div class="panel-section">
+                    <div class="section-intro">
+                        <span class="section-kicker">Behavior</span>
+                        <p>Control tool calls, markdown rendering, and response streaming.</p>
+                    </div>
+                    <div class="input-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enableTools">
+                            <label for="enableTools">Enable Tools</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enableMarkdown" checked>
+                            <label for="enableMarkdown">Enable Markdown Rendering</label>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enableStreaming">
+                            <label for="enableStreaming">Enable Streaming</label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="input-group" style="margin-top: 16px;">
-                    <label>Tool Implementations (JavaScript)</label>
-                    <textarea id="toolCodeEditor" class="tool-json-input" placeholder="// Return an object with function names matching tool definitions
+                <div class="panel-section">
+                    <div class="input-group">
+                        <label>Tools JSON Definition (Edit Here)</label>
+                        <textarea id="toolsEditor" class="tool-json-input"></textarea>
+                        <div class="btn-group">
+                            <button class="secondary" id="btnResetTools">Reset to Default</button>
+                            <button class="secondary" id="btnFormatTools">Format JSON</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="input-group">
+                        <label>Tool Implementations (JavaScript)</label>
+                        <textarea id="toolCodeEditor" class="tool-json-input" placeholder="// Return an object with function names matching tool definitions
 return {
     get_weather: (args) => {
         return { 
@@ -211,55 +260,56 @@ return {
         };
     }
 };"></textarea>
+                    </div>
                 </div>
 
-                <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
-
-                <!-- Code Generator -->
-                <div class="input-group">
-                    <label>Generate Code</label>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <select id="codeGenLang">
-                            <option value="curl">cURL</option>
-                            <option value="python">Python (requests)</option>
-                            <option value="js">Node.js (fetch)</option>
-                        </select>
+                <div class="panel-section">
+                    <div class="section-intro">
+                        <span class="section-kicker">Reference</span>
+                        <p>Generate request code from the current model and tab history.</p>
                     </div>
-                    <textarea id="codeOutput" class="tool-json-input" style="height: 150px;" readonly
-                        placeholder="Generated code will appear here..."></textarea>
-                    <button class="secondary" id="btnCopyGenCode" style="width: 100%; margin-top: 4px;">Copy
-                        Code</button>
+                    <div class="input-group">
+                        <label>Generate Code</label>
+                        <div class="select-row">
+                            <select id="codeGenLang">
+                                <option value="curl">cURL</option>
+                                <option value="python">Python (requests)</option>
+                                <option value="js">Node.js (fetch)</option>
+                            </select>
+                        </div>
+                        <textarea id="codeOutput" class="tool-json-input code-output" readonly
+                            placeholder="Generated code will appear here..."></textarea>
+                        <button class="secondary full-width-btn" id="btnCopyGenCode">Copy Code</button>
+                    </div>
                 </div>
 
-                <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
-
-                <div class="btn-group" style="flex-direction: column;">
-                    <button class="secondary" onclick="document.getElementById('importFile').click()">Import
-                        Chat</button>
-                    <button class="secondary" id="btnExport">Export Chat</button>
+                <div class="panel-section">
+                    <div class="btn-group stacked-buttons">
+                        <button class="secondary" onclick="document.getElementById('importFile').click()">Import Chat</button>
+                        <button class="secondary" id="btnExport">Export Chat</button>
+                    </div>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
                 </div>
-                <input type="file" id="importFile" accept=".json" style="display: none;">
 
-                <div style="border-top: 1px solid #2a2a2a; margin: 16px 0;"></div>
-
-                <!-- Advanced Options -->
-                <div class="input-group">
-                    <label style="font-weight: bold; margin-bottom: 8px;">Advanced Options</label>
-
-                    <div class="checkbox-group" style="margin-bottom: 8px;">
-                        <input type="checkbox" id="enableProxy" checked>
-                        <label for="enableProxy">Server-side proxy <span
-                                style="color: #4caf50; font-size: 11px;">(recommended)</span></label>
+                <div class="panel-section">
+                    <div class="section-intro">
+                        <span class="section-kicker">Routing</span>
+                        <p>Manage proxy behavior for hosted APIs and local model servers.</p>
                     </div>
-                    <p style="font-size: 11px; color: #888; margin: 0 0 12px 24px;">Routes requests through server to
-                        avoid CORS issues</p>
 
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="skipProxyForLocal" checked>
-                        <label for="skipProxyForLocal">Always skip proxy for local server</label>
+                    <div class="input-group">
+                        <div class="checkbox-group advanced-toggle">
+                            <input type="checkbox" id="enableProxy" checked>
+                            <label for="enableProxy">Server-side proxy <span class="inline-recommendation">(recommended)</span></label>
+                        </div>
+                        <p class="helper-copy">Routes requests through the server to avoid CORS issues.</p>
+
+                        <div class="checkbox-group advanced-toggle">
+                            <input type="checkbox" id="skipProxyForLocal" checked>
+                            <label for="skipProxyForLocal">Always skip proxy for local server</label>
+                        </div>
+                        <p class="helper-copy">Bypass proxy for localhost, 127.0.0.1, and local network URLs.</p>
                     </div>
-                    <p style="font-size: 11px; color: #888; margin: 0 0 0 24px;">Bypass proxy for localhost, 127.0.0.1,
-                        and local network URLs</p>
                 </div>
 
                 <div class="sidebar-footer">
@@ -277,7 +327,6 @@ return {
         </div>
     </div>
 
-    <!-- Custom Confirmation Modal -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 id="modalTitle">Clear Chat History?</h3>
