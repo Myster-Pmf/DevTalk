@@ -610,6 +610,33 @@ button.danger:hover {
     animation: fadeIn 0.16s ease-out;
 }
 
+.message-details {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.message-detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.message-detail-label {
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.message-detail-value {
+    color: var(--text-soft);
+    text-align: right;
+    word-break: break-word;
+}
+
 .message-content:focus {
     background: rgba(255, 255, 255, 0.02);
 }

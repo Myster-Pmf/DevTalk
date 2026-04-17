@@ -188,6 +188,49 @@ function buildResponseMetadata(model, requestMetrics, usage = {}) {
     };
 }
 
+function formatDuration(durationMs) {
+    if (durationMs === null || durationMs === undefined) return 'n/a';
+    if (durationMs < 1000) return `${durationMs} ms`;
+    return `${(durationMs / 1000).toFixed(2)} s`;
+}
+
+function formatNumericMetric(value, suffix = '') {
+    if (value === null || value === undefined || Number.isNaN(value)) return 'n/a';
+    return `${Number(value).toLocaleString()}${suffix}`;
+}
+
+function renderMessageDetails(msg) {
+    if (!isAssistantMessage(msg)) return '';
+
+    const activeVersion = getActiveAssistantVersion(msg);
+    const metadata = activeVersion?.metadata || msg.metadata;
+    if (!metadata || !msg.showDetails) return '';
+
+    const metrics = [
+        { label: 'Model', value: metadata.modelName || 'n/a' },
+        { label: 'Provider', value: metadata.provider || 'n/a' },
+        { label: 'Endpoint', value: metadata.baseUrl || 'n/a' },
+        { label: 'Started', value: metadata.startedAt ? new Date(metadata.startedAt).toLocaleString() : 'n/a' },
+        { label: 'Duration', value: formatDuration(metadata.durationMs) },
+        { label: 'Prompt Tokens', value: formatNumericMetric(metadata.promptTokens) },
+        { label: 'Completion Tokens', value: formatNumericMetric(metadata.completionTokens) },
+        { label: 'Total Tokens', value: formatNumericMetric(metadata.totalTokens) },
+        { label: 'Tokens / Sec', value: formatNumericMetric(metadata.tokensPerSecond) },
+        { label: 'Streaming', value: metadata.streamed ? 'Yes' : 'No' }
+    ];
+
+    return `
+        <div class="message-details">
+            ${metrics.map(metric => `
+                <div class="message-detail-row">
+                    <span class="message-detail-label">${escapeHtml(metric.label)}</span>
+                    <span class="message-detail-value">${escapeHtml(metric.value)}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 // --- DOM ELEMENTS ---
 const els = {
     apiKey: document.getElementById('apiKey'),
@@ -1398,6 +1441,7 @@ function renderMessageHTML(msg, i) {
     const copyIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
     const regenIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l5.64 5.64A9 9 0 0 0 20.49 15"></path></svg>`;
     const resendIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+    const detailsIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>`;
 
     const roleDisplay = msg.role.toUpperCase();
     const versionCount = isAssistant ? getAssistantVersionCount(msg) : 0;
@@ -1421,6 +1465,7 @@ function renderMessageHTML(msg, i) {
                 </div>
                 <div class="message-actions">
                      <button class="action-btn" title="Copy" onclick="copyMessage(${i})">${copyIcon}</button>
+                     ${isAssistant ? `<button class="action-btn" title="Details" onclick="toggleMessageDetails(${i})">${detailsIcon}</button>` : ''}
                      ${isAssistant ? `<button class="action-btn" title="Regenerate" onclick="regenerateMessage(${i})">${regenIcon}</button>` : ''}
                      ${isUser ? `<button class="action-btn" title="Resend from here" onclick="resendFromMessage(${i})">${resendIcon}</button>` : ''}
                      <button class="action-btn" title="Edit" onclick="startEditing(${i})">${editIcon}</button>
@@ -1428,6 +1473,7 @@ function renderMessageHTML(msg, i) {
                 </div>
             </div>
             <div class="message-content" id="msg-${i}">${contentDisplay}</div>
+            ${renderMessageDetails(msg)}
         </div>
     `;
 }
@@ -1702,6 +1748,16 @@ function switchAssistantVersion(index, direction) {
     saveToStorage();
     renderSingleMessage(index);
     updateGeneratedCode();
+}
+
+function toggleMessageDetails(index) {
+    const tab = chatTabs[activeTabIndex];
+    const msg = tab?.messages?.[index];
+    if (!msg || !isAssistantMessage(msg)) return;
+
+    msg.showDetails = !msg.showDetails;
+    saveToStorage();
+    renderSingleMessage(index);
 }
 
 function prepareForEdit(index) {
