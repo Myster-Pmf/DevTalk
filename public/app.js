@@ -66,6 +66,49 @@ let activeTabIndex = 0;
 let currentTools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
 // Pending images for next message (base64 data URLs)
 let pendingImages = [];
+const tabRuntimeState = new Map();
+
+function getTabRuntimeState(tab) {
+    if (!tab) return { isGenerating: false, abortController: null };
+    if (!tabRuntimeState.has(tab.id)) {
+        tabRuntimeState.set(tab.id, { isGenerating: false, abortController: null });
+    }
+    return tabRuntimeState.get(tab.id);
+}
+
+function setTabGenerating(tab, isGenerating, abortController = null) {
+    if (!tab) return;
+    const runtime = getTabRuntimeState(tab);
+    runtime.isGenerating = isGenerating;
+    runtime.abortController = abortController;
+    updateSendButtonState();
+}
+
+function updateSendButtonState() {
+    const btnSend = document.getElementById('btnSend');
+    const tab = chatTabs[activeTabIndex];
+    const runtime = getTabRuntimeState(tab);
+    if (!btnSend) return;
+
+    if (runtime.isGenerating) {
+        btnSend.textContent = 'Stop';
+        btnSend.classList.add('is-generating');
+        btnSend.title = 'Stop generating';
+    } else {
+        btnSend.textContent = 'Send';
+        btnSend.classList.remove('is-generating');
+        btnSend.title = 'Send message';
+    }
+}
+
+function cancelGeneration(index = activeTabIndex) {
+    const tab = chatTabs[index];
+    if (!tab) return;
+    const runtime = getTabRuntimeState(tab);
+    if (runtime.abortController) {
+        runtime.abortController.abort();
+    }
+}
 
 function isAssistantMessage(msg) {
     return msg && msg.role === 'assistant';
@@ -243,6 +286,7 @@ const els = {
     tabs: document.getElementById('tabs'),
     messages: document.getElementById('messages'),
     status: document.getElementById('status'),
+    btnSend: document.getElementById('btnSend'),
     toolsEditor: document.getElementById('toolsEditor'),
     enableTools: document.getElementById('enableTools'),
     // Note: systemPrompt is now looked up dynamically or by ID if consistent, but we use tab.systemPrompt mostly.
@@ -268,7 +312,7 @@ function init() {
     // Event Listeners
     document.getElementById('btnAddModel').onclick = saveModel;
     document.getElementById('btnUpdateModel').onclick = updateModel;
-    document.getElementById('btnSend').onclick = sendMessage;
+    document.getElementById('btnSend').onclick = handleSendButtonClick;
     document.getElementById('btnClear').onclick = () => {
         showConfirmModal(
             "Clear Chat History?",
@@ -316,7 +360,10 @@ function init() {
     els.userInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            const runtime = getTabRuntimeState(chatTabs[activeTabIndex]);
+            if (!runtime.isGenerating) {
+                sendMessage();
+            }
         }
     });
 
@@ -376,6 +423,7 @@ function init() {
 
     // Initial code gen
     updateGeneratedCode();
+    updateSendButtonState();
 }
 
 function toggleSidebar(side) {
@@ -393,6 +441,16 @@ function toggleSidebar(side) {
 
     const isAnyOpen = left.classList.contains('open') || right.classList.contains('open');
     overlay.style.display = isAnyOpen ? 'block' : 'none';
+}
+
+function handleSendButtonClick() {
+    const tab = chatTabs[activeTabIndex];
+    const runtime = getTabRuntimeState(tab);
+    if (runtime.isGenerating) {
+        cancelGeneration(activeTabIndex);
+        return;
+    }
+    sendMessage();
 }
 
 function closeAllSidebars() {
@@ -692,11 +750,14 @@ function switchTab(index) {
     renderTabs();
     renderMessages();
     updateGeneratedCode(); // NEW: update on tab switch
+    updateSendButtonState();
 }
 
 function closeTab(index, e) {
     e.stopPropagation();
     if (chatTabs.length <= 1) return; // Keep at least one
+    cancelGeneration(index);
+    tabRuntimeState.delete(chatTabs[index]?.id);
 
     chatTabs.splice(index, 1);
     if (activeTabIndex >= chatTabs.length) activeTabIndex = chatTabs.length - 1;
@@ -905,6 +966,8 @@ function prepareCleanMessages(messages, isOllama = false, isVisionModel = true) 
 async function sendMessage(isRegen = false, regenTargetIndex = null) {
     const tab = chatTabs[activeTabIndex];
     if (!tab || tab.modelIndex === null) return showStatus('Select a model', 'error');
+    const runtime = getTabRuntimeState(tab);
+    if (runtime.isGenerating) return;
 
     // 1. Add User Message to UI (Skip if regenerating)
     if (isRegen !== true) {
@@ -927,8 +990,6 @@ async function sendMessage(isRegen = false, regenTargetIndex = null) {
             } else { return; }
         }
     }
-    showStatus('Sending...', 'loading');
-
     // 2. Prepare Payload
     const endpointUrl = normalizeUrl(model.baseUrl.trim());
 
@@ -982,23 +1043,31 @@ async function sendMessage(isRegen = false, regenTargetIndex = null) {
         startedPerf: performance.now(),
         streamed: enableStreaming
     };
+    const abortController = new AbortController();
+    setTabGenerating(tab, true, abortController);
 
     try {
         if (enableStreaming) {
             // --- STREAMING MODE ---
-            await handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex, requestMetrics);
+            await handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex, requestMetrics, abortController.signal);
         } else {
             // --- NON-STREAMING MODE ---
-            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex, requestMetrics);
+            await handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex, requestMetrics, abortController.signal);
         }
     } catch (error) {
-        showStatus(`Error: ${error.message}`, 'error');
+        if (error.name === 'AbortError') {
+            hideStatus();
+        } else {
+            showStatus(`Error: ${error.message}`, 'error');
+        }
         console.error(error);
+    } finally {
+        setTabGenerating(tab, false, null);
     }
 }
 
 // --- NON-STREAMING RESPONSE HANDLER ---
-async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null, requestMetrics = null) {
+async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null, requestMetrics = null, signal = null) {
     let response;
 
     if (shouldUseProxy(endpointUrl)) {
@@ -1006,6 +1075,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, 
         response = await fetch('/api/proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal,
             body: JSON.stringify({
                 targetUrl: endpointUrl,
                 apiKey: model.apiKey.trim(),
@@ -1021,6 +1091,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, 
         response = await fetch(endpointUrl, {
             method: 'POST',
             headers: headers,
+            signal,
             body: JSON.stringify(requestBody)
         });
     }
@@ -1136,7 +1207,7 @@ async function handleNonStreamingResponse(tab, model, endpointUrl, requestBody, 
 }
 
 // --- STREAMING RESPONSE HANDLER ---
-async function handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null, requestMetrics = null) {
+async function handleStreamingResponse(tab, model, endpointUrl, requestBody, regenTargetIndex = null, requestMetrics = null, signal = null) {
     let response;
 
     if (shouldUseProxy(endpointUrl)) {
@@ -1144,6 +1215,7 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
         response = await fetch('/api/proxy-stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal,
             body: JSON.stringify({
                 targetUrl: endpointUrl,
                 apiKey: model.apiKey.trim(),
@@ -1159,6 +1231,7 @@ async function handleStreamingResponse(tab, model, endpointUrl, requestBody, reg
         response = await fetch(endpointUrl, {
             method: 'POST',
             headers: headers,
+            signal,
             body: JSON.stringify(requestBody)
         });
     }

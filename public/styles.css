@@ -289,6 +289,16 @@ button:not(.icon-btn):not(.action-btn):not(.tab-close):not(.attach-btn):hover {
     background: #78b8ff;
 }
 
+button.is-generating {
+    background: rgba(255, 107, 107, 0.12);
+    color: #ffb4b4;
+    border-color: rgba(255, 107, 107, 0.22);
+}
+
+button.is-generating:hover {
+    background: rgba(255, 107, 107, 0.18);
+}
+
 button.secondary {
     background: #111a25;
     color: var(--text-soft);
