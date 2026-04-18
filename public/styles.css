@@ -176,6 +176,7 @@ select {
 .middle-panel {
     background:
         linear-gradient(180deg, rgba(11, 22, 35, 0.98), rgba(7, 15, 24, 0.98));
+    min-width: 0;
 }
 
 .panel::before,
@@ -195,13 +196,7 @@ select {
 }
 
 .panel::after {
-    top: 14px;
-    right: 14px;
-    width: 68px;
-    height: 4px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, transparent 0, var(--gold) 14%, var(--gold) 86%, transparent 100%);
-    box-shadow: 0 0 18px rgba(255, 182, 41, 0.28);
+    display: none;
 }
 
 .panel-header,
@@ -209,6 +204,27 @@ select {
     flex-shrink: 0;
     padding: 12px 14px;
     border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+}
+
+.panel-header::after,
+.workspace-topbar::after {
+    content: "";
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: clamp(38px, 16%, 68px);
+    max-width: calc(100% - 28px);
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent 0, var(--gold) 18%, var(--gold) 82%, transparent 100%);
+    box-shadow: 0 0 18px rgba(255, 182, 41, 0.22);
+}
+
+.panel-header-actions::after {
+    right: 86px;
+    width: 42px;
 }
 
 .panel-header {
@@ -530,11 +546,13 @@ button.danger:hover {
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    padding-right: 92px;
 }
 
 .workspace-copy {
     display: grid;
     gap: 2px;
+    min-width: 0;
 }
 
 .workspace-copy h1 {
@@ -547,12 +565,7 @@ button.danger:hover {
 }
 
 .workspace-meta {
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--text-muted);
-    max-width: 240px;
-    text-align: right;
-    font-family: 'IBM Plex Mono', 'Consolas', monospace;
+    display: none;
 }
 
 .tabs {
@@ -560,6 +573,7 @@ button.danger:hover {
     align-items: center;
     gap: 6px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding: 10px 12px 0;
     flex-shrink: 0;
     white-space: nowrap;
@@ -630,15 +644,19 @@ button.danger:hover {
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
 }
 
 .messages {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    overscroll-behavior: contain;
 }
 
 .message {
@@ -897,6 +915,8 @@ button.danger:hover {
     background:
         linear-gradient(180deg, rgba(10, 18, 28, 0.96), rgba(7, 14, 22, 0.98));
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .composer-shell {
@@ -1372,13 +1392,15 @@ button.danger:hover {
         border-right: none;
     }
 
-    .panel::after {
+    .panel-header::after,
+    .workspace-topbar::after {
         width: 52px;
     }
 
     .workspace-topbar {
         flex-direction: column;
         align-items: flex-start;
+        padding-right: 14px;
     }
 }
 
