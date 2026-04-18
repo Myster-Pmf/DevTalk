@@ -1,140 +1,154 @@
 # DevTalk
 
-DevTalk is a lightweight AI playground for testing chat models, comparing runs across tabs, simulating tools, and inspecting responses without leaving the browser.
+<p align="center">
+  <img src="public/assets/devtalk_logo.svg" alt="DevTalk logo" width="96" />
+</p>
 
-It is built as a static frontend in `public/` with two small serverless proxy handlers in `api/`.
+<p align="center">
+  A polished AI playground for testing models, comparing prompts across tabs, simulating tools, and inspecting responses in one place.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-3.0.0-1f6feb?style=for-the-badge" alt="Version 3.0.0" />
+  <img src="https://img.shields.io/badge/frontend-Vanilla_JS-0b1220?style=for-the-badge" alt="Vanilla JS frontend" />
+  <img src="https://img.shields.io/badge/proxy-Vercel_Functions-111827?style=for-the-badge" alt="Vercel functions proxy" />
+  <img src="https://img.shields.io/badge/license-MIT-238636?style=for-the-badge" alt="MIT license" />
+</p>
 
 ![DevTalk Interface](public/assets/devtalk_interface.png)
 
-> Note
-> Most state is stored locally in your browser, including saved models, tab history, tool definitions, and UI preferences. Requests only leave your machine when you send them to the configured model endpoint or through the optional proxy.
+> [!NOTE]
+> DevTalk stores its working state locally in your browser, including saved models, tabs, tool definitions, and preferences. Requests only leave your machine when you send them to a configured provider endpoint or through the optional proxy routes.
 
-## What It Can Do
+## Highlights
 
-- Manage a reusable model library with API key, base URL, temperature, max tokens, and vision capability per model.
-- Work in multiple chat tabs, with per-tab system prompts and tab renaming.
-- Send requests to OpenAI-compatible endpoints, Ollama-style endpoints, and Lightning.ai-style endpoints that expect `max_completion_tokens`.
-- Toggle server-side proxying, with an option to automatically bypass the proxy for localhost and LAN endpoints.
-- Stream responses in real time and stop generation mid-response.
+- Compare prompt runs across multiple tabs with separate tab-level system prompts.
+- Save and reuse model configurations with API key, base URL, temperature, max tokens, and vision support.
+- Work with OpenAI-compatible APIs, Ollama-style endpoints, and Lightning.ai-style token handling.
+- Toggle streaming, Markdown rendering, tools, proxy usage, and local-network proxy bypass from the UI.
 - Attach images for vision-capable models.
-- Simulate tool calling with editable tool JSON plus a JavaScript tool implementation editor.
+- Simulate tool calls with editable JSON schemas and in-browser JavaScript implementations.
 - Regenerate assistant replies into version history and switch between versions later.
-- Inspect response details such as duration, provider label, prompt tokens, completion tokens, total tokens, and tokens per second.
-- Toggle Markdown rendering for responses, including syntax highlighting and copy buttons for code blocks.
-- Edit, delete, copy, and resend messages from any point in a conversation.
-- Generate ready-to-use request code in `curl`, Python `requests`, or Node `fetch`.
-- Import and export saved models.
-- Export and import playground sessions.
-- Persist the working state locally so the app restores on reload.
-- Use the app on mobile with slide-out side panels.
+- Inspect response metadata including timing and token usage.
+- Generate request snippets in `curl`, Python `requests`, and Node `fetch`.
+- Export and import both model libraries and full playground sessions.
+
+## Screens and Workflow
+
+DevTalk is organized into three working areas:
+
+- Left panel: model configuration and saved model library
+- Center panel: tabs, chat history, composer, and image attachments
+- Right panel: token usage, behavior toggles, tools editor, tool code, and generated request code
+
+That layout makes it easy to tweak a model, run a prompt, inspect the result, then immediately compare again in another tab.
+
+## Features
+
+### Model and Provider Handling
+
+- Reusable saved model library
+- Per-model API key, base URL, temperature, max token limit, and vision toggle
+- Support for direct browser calls or proxy-based calls
+- Automatic proxy bypass for localhost and local network URLs when enabled
+- Import/export for saved model presets
+
+### Chat Experience
+
+- Multi-tab workflow with persistent tab state
+- Per-tab system prompts
+- Real-time streaming with `Send` to `Stop` state switching
+- Message editing, deletion, copy, and resend-from-here actions
+- Assistant response regeneration with version navigation
+- Image attachment support for vision-capable models
+- Mobile-friendly layout with slide-out side panels
+
+### Tooling and Inspection
+
+- Editable tool schema JSON
+- In-browser JavaScript tool simulation
+- Automatic insertion of tool results into the conversation
+- Toggleable Markdown rendering with syntax highlighting
+- Copy buttons for code blocks
+- Response metadata details such as:
+  - provider label
+  - duration
+  - prompt tokens
+  - completion tokens
+  - total tokens
+  - tokens per second
+- Token usage tracking for the active tab and conversation history
+- Code generation for `curl`, Python, and Node
+
+### Persistence and Portability
+
+- Local browser persistence via `localStorage`
+- Full session export/import including:
+  - models
+  - tabs
+  - chat history
+  - tools JSON
+  - tool code
+  - active tab state
+- Backward-compatible legacy import support for older chat exports
 
 ## Stack
 
 - Frontend: vanilla JavaScript, HTML, CSS
-- Rendering: [Marked.js](https://marked.js.org/) and [Highlight.js](https://highlightjs.org/)
-- Proxy: Vercel-style serverless functions in [`api/proxy.js`](api/proxy.js) and [`api/proxy-stream.js`](api/proxy-stream.js)
+- Markdown rendering: [Marked.js](https://marked.js.org/)
+- Syntax highlighting: [Highlight.js](https://highlightjs.org/)
+- Proxy routes: [`api/proxy.js`](api/proxy.js) and [`api/proxy-stream.js`](api/proxy-stream.js)
 
 ## Project Structure
 
 ```text
 DevTalk/
-|- api/
-|  |- proxy.js
-|  `- proxy-stream.js
-|- public/
-|  |- app.js
-|  |- index.html
-|  |- styles.css
-|  `- assets/
-|- package.json
-`- README.md
+├─ api/
+│  ├─ proxy.js
+│  └─ proxy-stream.js
+├─ public/
+│  ├─ app.js
+│  ├─ index.html
+│  ├─ styles.css
+│  └─ assets/
+├─ package.json
+└─ README.md
 ```
 
 ## Running Locally
 
-This repo currently has no npm scripts and no installed package dependencies. The old `npm run dev` flow documented previously is no longer accurate.
+This repository currently does not include npm scripts or installed package dependencies, so the older `npm install` and `npm run dev` instructions are no longer accurate.
 
-### Option 1: Frontend only
+### Frontend Only
 
-If you only need the UI and plan to call providers directly from the browser, serve the `public/` folder with any static file server.
-
-Examples:
+If your provider supports direct browser requests, you can serve the `public/` folder with any static file server and disable proxying in the UI.
 
 ```bash
-# Python
 python -m http.server 3000 --directory public
 ```
 
 ```bash
-# Node
 npx serve public
 ```
 
-In this mode, leave proxying disabled in the UI if your target endpoint supports direct browser requests.
+### With Proxy Routes
 
-### Option 2: Full app with proxy routes
+If you want to use `/api/proxy` and `/api/proxy-stream`, run the project in an environment that supports Vercel-style serverless functions or deploy it to Vercel.
 
-If you want to use the built-in `/api/proxy` and `/api/proxy-stream` routes, run the project in an environment that supports Vercel-style serverless functions, or deploy it to Vercel.
-
-The proxy is useful when:
+The proxy mode is useful when:
 
 - your provider blocks browser-origin requests with CORS
-- you want the browser to call your own server route instead of the provider directly
-- you want the app to stream through the proxy endpoint
+- you prefer requests to flow through your own server route
+- you want streaming to pass through the built-in proxy endpoint
 
-## Usage
+## Quick Start
 
 1. Add a model in the left panel.
-2. Pick the base URL for your provider or local server.
-3. Enable `Vision Model` if that model should receive attached images.
-4. In the right panel, decide whether you want tools, Markdown rendering, streaming, and proxying enabled.
+2. Enter the provider base URL and API key.
+3. Enable `Vision Model` if that model should receive images.
+4. Turn on tools, Markdown, streaming, or proxy options in the right panel as needed.
 5. Start chatting in the center panel.
-6. Use tabs to compare prompts, providers, or prompt variants side by side.
-
-## Feature Notes
-
-### Model Handling
-
-- Saved models are reusable across tabs.
-- Import skips duplicate models when possible.
-- Tabs keep their own selected model reference and system prompt.
-
-### Chat Workflow
-
-- `Send` turns into `Stop` while a response is streaming.
-- Assistant replies can store multiple regenerated versions.
-- User messages can be resent from a specific point to branch the conversation.
-
-### Tool Simulation
-
-- Tool schemas are edited as JSON.
-- Tool implementations are authored in JavaScript and executed in-browser.
-- When a model returns tool calls, DevTalk simulates them and appends tool results into the chat.
-
-### Response Inspection
-
-- The right panel tracks total token usage for the active tab.
-- History token count uses stored values when available and falls back to estimation otherwise.
-- Assistant messages can expose per-response metadata from the current version.
-
-### Imports and Exports
-
-- Model export/import is separate from full chat export/import.
-- Full chat export includes models, tabs, tool definitions, tool code, and Markdown preference.
-- Legacy chat imports with only `messages` are still supported.
-
-## What Changed From The Old README
-
-The previous README was behind the current codebase. It missed or misstated several things, including:
-
-- there is no current `npm run dev` script
-- model import/export support exists
-- image attachments and vision-model handling exist
-- assistant response versioning exists
-- response metadata/details exist
-- proxy bypass for local network endpoints exists
-- code generation exists for `curl`, Python, and Node
-- message editing, resend, regenerate, and per-message actions are richer than previously documented
+6. Use additional tabs to compare prompt variants, providers, or settings.
 
 ## License
 
