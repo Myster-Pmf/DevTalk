@@ -1,101 +1,145 @@
-# DevTalk - Pro AI Model Playground
+# DevTalk
 
-DevTalk is a high-performance, developer-centric web playground for testing and interacting with various AI models. Inspired by the **Groq Playground**, it focuses on extreme simplicity and speed, providing a distraction-free environment for model experimentation.
+DevTalk is a lightweight AI playground for testing chat models, comparing runs across tabs, simulating tools, and inspecting responses without leaving the browser.
 
-**🚀 Try it now:** [dev-talk-beta.vercel.app](https://dev-talk-beta.vercel.app/)
+It is built as a static frontend in `public/` with two small serverless proxy handlers in `api/`.
 
 ![DevTalk Interface](public/assets/devtalk_interface.png)
 
-> [!NOTE]
-> **Privacy First**: Everything is stored locally in your browser's LocalStorage. Your API keys and chat history never leave your machine (except when sent directly to the model endpoint).
+> Note
+> Most state is stored locally in your browser, including saved models, tab history, tool definitions, and UI preferences. Requests only leave your machine when you send them to the configured model endpoint or through the optional proxy.
 
-![DevTalk Banner](https://img.shields.io/badge/DevTalk-AI_Playground-blueviolet?style=for-the-badge&logo=openai)
+## What It Can Do
 
-## 🚀 Key Features
+- Manage a reusable model library with API key, base URL, temperature, max tokens, and vision capability per model.
+- Work in multiple chat tabs, with per-tab system prompts and tab renaming.
+- Send requests to OpenAI-compatible endpoints, Ollama-style endpoints, and Lightning.ai-style endpoints that expect `max_completion_tokens`.
+- Toggle server-side proxying, with an option to automatically bypass the proxy for localhost and LAN endpoints.
+- Stream responses in real time and stop generation mid-response.
+- Attach images for vision-capable models.
+- Simulate tool calling with editable tool JSON plus a JavaScript tool implementation editor.
+- Regenerate assistant replies into version history and switch between versions later.
+- Inspect response details such as duration, provider label, prompt tokens, completion tokens, total tokens, and tokens per second.
+- Toggle Markdown rendering for responses, including syntax highlighting and copy buttons for code blocks.
+- Edit, delete, copy, and resend messages from any point in a conversation.
+- Generate ready-to-use request code in `curl`, Python `requests`, or Node `fetch`.
+- Import and export saved models.
+- Export and import playground sessions.
+- Persist the working state locally so the app restores on reload.
+- Use the app on mobile with slide-out side panels.
 
-### 🛠 Model & Tool Management
-- **Multi-Model Support**: Easily switch between different model providers. Supports **OpenAI compatible APIs**, **Ollama**, and **Ollama Cloud** out of the box.
-- **Dynamic Tool Simulation**: Implement and test LLM tools (function calling) on the fly using the built-in JavaScript editor.
-- **System Prompts**: Set per-tab system prompts to steer model behavior.
+## Stack
 
-### 💬 Advanced Chat Interface
-- **Real-Time Streaming**: Toggle between single-response and real-time streaming modes for all supported models.
-- **Tabbed Experience**: Organize multiple chat sessions in tabs. Support for right-click tab renaming and full persistence.
-- **Markdown Rendering**: Toggleable GitHub-style markdown rendering with syntax highlighting via `marked.js` and `highlight.js`.
-- **Direct Message Editing**: Click any message to edit its content directly.
-- **Token Tracking**: Precise token usage monitoring (prompt/completion/total) with support for model-specific usage fields.
+- Frontend: vanilla JavaScript, HTML, CSS
+- Rendering: [Marked.js](https://marked.js.org/) and [Highlight.js](https://highlightjs.org/)
+- Proxy: Vercel-style serverless functions in [`api/proxy.js`](api/proxy.js) and [`api/proxy-stream.js`](api/proxy-stream.js)
 
-### 💻 Developer Tools
-- **Reactive Code Generator**: Automatically generates production-ready code snippets in **cURL**, **Python (requests)**, and **Node.js (fetch)** based on your current playground settings.
-- **Full State Portability**: Export and import your entire environment, including all models, tabs, tool definitions, and custom tool code.
+## Project Structure
 
-### 📱 Responsive Design
-- **Mobile First**: Fully responsive layout with slide-out sidebars (80% width) and overlay system for a seamless mobile experience.
+```text
+DevTalk/
+|- api/
+|  |- proxy.js
+|  `- proxy-stream.js
+|- public/
+|  |- app.js
+|  |- index.html
+|  |- styles.css
+|  `- assets/
+|- package.json
+`- README.md
+```
 
----
+## Running Locally
 
-## 🛠 Tech Stack
+This repo currently has no npm scripts and no installed package dependencies. The old `npm run dev` flow documented previously is no longer accurate.
 
-- **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3.
-- **Markdown**: [Marked.js](https://marked.js.org/) & [Highlight.js](https://highlightjs.org/).
-- **Backend (Proxy)**: Node.js / Vercel Serverless Functions (for handling CORS and API key security).
-- **Icons**: [Lucide](https://lucide.dev/) (SVG implementation).
+### Option 1: Frontend only
 
----
+If you only need the UI and plan to call providers directly from the browser, serve the `public/` folder with any static file server.
 
-## 🚦 Getting Started
+Examples:
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v16 or higher recommended)
-- [npm](https://www.npmjs.com/)
+```bash
+# Python
+python -m http.server 3000 --directory public
+```
 
-### Installation
+```bash
+# Node
+npx serve public
+```
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Myster-Pmf/DevTalk.git
-   cd DevTalk
-   ```
+In this mode, leave proxying disabled in the UI if your target endpoint supports direct browser requests.
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+### Option 2: Full app with proxy routes
 
-3. **Run the development server**:
-   ```bash
-   npm run dev
-   ```
-   *The app should now be running at `http://localhost:3000` (or your configured port).*
+If you want to use the built-in `/api/proxy` and `/api/proxy-stream` routes, run the project in an environment that supports Vercel-style serverless functions, or deploy it to Vercel.
 
----
+The proxy is useful when:
 
-## 📖 Usage
+- your provider blocks browser-origin requests with CORS
+- you want the browser to call your own server route instead of the provider directly
+- you want the app to stream through the proxy endpoint
 
-1. **Configure a Model**: Enter your API key, Model Name, and Base URL in the left sidebar.
-2. **Setup Tools (Optional)**: In the right sidebar, define tool JSON and write your simulator logic in the JS code editor.
-3. **Toggle Streaming**: Enable "Real-Time Streaming" in the right panel for incremental responses, or disable it for single JSON blocks.
-4. **Chat**: Use the bottom input to send messages. Toggle Markdown in the right panel if needed.
-5. **Export Your Work**: Use the "Export Chat" button to save your entire configuration for later use.
+## Usage
 
----
+1. Add a model in the left panel.
+2. Pick the base URL for your provider or local server.
+3. Enable `Vision Model` if that model should receive attached images.
+4. In the right panel, decide whether you want tools, Markdown rendering, streaming, and proxying enabled.
+5. Start chatting in the center panel.
+6. Use tabs to compare prompts, providers, or prompt variants side by side.
 
-## 🤝 Contributing
+## Feature Notes
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Model Handling
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- Saved models are reusable across tabs.
+- Import skips duplicate models when possible.
+- Tabs keep their own selected model reference and system prompt.
 
----
+### Chat Workflow
 
-## 📄 License
+- `Send` turns into `Stop` while a response is streaming.
+- Assistant replies can store multiple regenerated versions.
+- User messages can be resent from a specific point to branch the conversation.
 
-Distributed under the MIT License. See `LICENSE` for more information.
+### Tool Simulation
 
----
+- Tool schemas are edited as JSON.
+- Tool implementations are authored in JavaScript and executed in-browser.
+- When a model returns tool calls, DevTalk simulates them and appends tool results into the chat.
 
-Developed with ❤️ by [Myster-Pmf](https://github.com/Myster-Pmf)
+### Response Inspection
+
+- The right panel tracks total token usage for the active tab.
+- History token count uses stored values when available and falls back to estimation otherwise.
+- Assistant messages can expose per-response metadata from the current version.
+
+### Imports and Exports
+
+- Model export/import is separate from full chat export/import.
+- Full chat export includes models, tabs, tool definitions, tool code, and Markdown preference.
+- Legacy chat imports with only `messages` are still supported.
+
+## What Changed From The Old README
+
+The previous README was behind the current codebase. It missed or misstated several things, including:
+
+- there is no current `npm run dev` script
+- model import/export support exists
+- image attachments and vision-model handling exist
+- assistant response versioning exists
+- response metadata/details exist
+- proxy bypass for local network endpoints exists
+- code generation exists for `curl`, Python, and Node
+- message editing, resend, regenerate, and per-message actions are richer than previously documented
+
+## License
+
+Distributed under the MIT License. See [LICENSE](LICENSE).
+
+## Author
+
+Created by [Myster-Pmf](https://github.com/Myster-Pmf)
