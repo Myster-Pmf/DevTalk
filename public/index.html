@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevTalk Playground</title>
-    <link rel="icon" type="image/svg+xml" href="assets/devtalk_logo.svg">
+    <meta name="description" content="DevTalk Playground — Compare AI model outputs side by side with a kawaii twist.">
+    <link rel="icon" type="image/png" href="assets/devtalk_logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Oxanium:wght@500;600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Oxanium:wght@500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -19,24 +20,23 @@
 </head>
 
 <body>
+    <!-- ========== MOBILE HEADER ========== -->
     <div id="mobileHeader" class="mobile-only-header">
         <button id="btnToggleLeft" class="mobile-toggle-btn" aria-label="Open model configuration">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
                 <line x1="3" y1="6" x2="21" y2="6"></line>
                 <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
         </button>
         <div class="mobile-app-title">
-            <span class="mobile-app-kicker">Workspace</span>
+            <span class="mobile-app-kicker">🐾 Workspace</span>
             <span>DevTalk</span>
         </div>
         <button id="btnToggleRight" class="mobile-toggle-btn" aria-label="Open tools and options">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
                 <circle cx="12" cy="12" r="3"></circle>
-                <path
-                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                </path>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
         </button>
     </div>
@@ -44,27 +44,31 @@
     <div id="sidePaneOverlay" class="panel-overlay"></div>
 
     <div class="container">
+
+        <!-- ========== LEFT PANEL — MODEL CONFIG ========== -->
         <div class="panel left-panel" id="leftPanel">
             <div class="mobile-panel-header mobile-only">
                 <h3>Model Config</h3>
                 <button class="close-panel-btn" onclick="toggleSidebar('left')">&times;</button>
             </div>
+
+            <!-- Header -->
             <div class="panel-header panel-header-actions">
                 <div class="panel-header-copy">
                     <div>Model Configuration</div>
                 </div>
                 <div class="header-actions">
                     <button class="icon-btn" id="btnExportModels" title="Export Models">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <!-- Download icon -->
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
                     </button>
                     <button class="icon-btn" id="btnImportModels" title="Import Models">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <!-- Upload icon -->
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -72,8 +76,18 @@
                     </button>
                     <input type="file" id="importModelsFile" accept=".json" style="display: none;">
                 </div>
+                <!-- Cat mascot peeks from header corner -->
+                <img
+                    src="assets/sitting_cat-removebg-preview.png"
+                    alt=""
+                    class="panel-header-cat"
+                    aria-hidden="true"
+                >
             </div>
+
+            <!-- Content -->
             <div class="panel-content">
+                <!-- Connection section -->
                 <div class="panel-section panel-section-highlight">
                     <div class="section-intro">
                         <span class="section-kicker">Connection</span>
@@ -85,8 +99,7 @@
                         <div class="api-key-container">
                             <input type="password" id="apiKey" placeholder="sk-...">
                             <button class="icon-btn" id="toggleApiKey" title="Show or hide API key">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
                                 </svg>
@@ -96,12 +109,12 @@
 
                     <div class="input-group">
                         <label>Model Name</label>
-                        <input type="text" id="modelName" placeholder="lightning-ai/gpt-oss-20b">
+                        <input type="text" id="modelName" placeholder="gemini-2.0-flash">
                     </div>
 
                     <div class="input-group">
                         <label>Base URL</label>
-                        <input type="text" id="baseUrl" placeholder="https://lightning.ai/api/v1">
+                        <input type="text" id="baseUrl" placeholder="https://generativelanguage.googleapis.com/v1beta/openai">
                     </div>
 
                     <div class="param-row">
@@ -122,7 +135,7 @@
 
                     <div class="input-group">
                         <label>System Prompt (For this Tab)</label>
-                        <textarea id="systemPrompt" style="min-height: 80px;" placeholder="System prompt..."></textarea>
+                        <textarea id="systemPrompt" style="min-height: 80px;" placeholder="You are a helpful assistant."></textarea>
                     </div>
 
                     <div class="btn-group">
@@ -131,23 +144,38 @@
                     </div>
                 </div>
 
+                <!-- Library section -->
                 <div class="panel-section">
                     <div class="section-intro">
                         <span class="section-kicker">Library</span>
                         <p>Save frequently used endpoints and switch them across tabs without re-entering details.</p>
                     </div>
                     <div class="model-list" id="modelList"></div>
+
+                    <!-- Sleeping cat decoration -->
+                    <img
+                        src="assets/lying_cat__sleep_-removebg-preview.png"
+                        alt=""
+                        class="panel-footer-cat"
+                        aria-hidden="true"
+                    >
                 </div>
             </div>
         </div>
 
+        <!-- ========== MIDDLE PANEL — WORKSPACE ========== -->
         <div class="panel middle-panel">
             <div class="workspace-topbar">
                 <div class="workspace-copy">
-                    <h1>Prompt workspace</h1>
+                    <img src="assets/devtalk_logo.png" alt="DevTalk" class="workspace-logo">
+                    <h1>Prompt Workspace</h1>
                 </div>
             </div>
+
+            <!-- Tabs -->
             <div class="tabs" id="tabs"></div>
+
+            <!-- Chat area -->
             <div class="chat-container">
                 <div class="messages" id="messages"></div>
 
@@ -158,8 +186,7 @@
                     <div class="composer-shell">
                         <div class="composer-tools">
                             <button class="icon-btn attach-btn" id="btnAttachImage" title="Attach image">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                                     <polyline points="21 15 16 10 5 21"></polyline>
@@ -172,8 +199,21 @@
                             <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
                             <textarea id="userInput" placeholder="Type your message..."></textarea>
                             <div class="composer-actions">
-                                <button id="btnSend">Send</button>
-                                <button class="secondary" id="btnClear">Clear</button>
+                                <button id="btnSend">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;margin-right:4px;vertical-align:-2px;">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                    Send
+                                </button>
+                                <button class="secondary" id="btnClear">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;margin-right:4px;vertical-align:-2px;">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                        <path d="M10 11v6M14 11v6"></path>
+                                    </svg>
+                                    Clear
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -181,17 +221,57 @@
             </div>
         </div>
 
+        <!-- ========== RIGHT PANEL — TOOLS & OPTIONS ========== -->
         <div class="panel right-panel" id="rightPanel">
             <div class="mobile-panel-header mobile-only">
-                <h3>Tools & Options</h3>
+                <h3>Tools &amp; Options</h3>
                 <button class="close-panel-btn" onclick="toggleSidebar('right')">&times;</button>
             </div>
+
+            <!-- Header with theme toggle -->
             <div class="panel-header">
                 <div class="panel-header-copy">
-                    <div>Tools & Options</div>
+                    <div>Tools &amp; Options</div>
                 </div>
+                <div class="header-actions">
+                    <!-- Theme toggle button -->
+                    <button
+                        class="theme-toggle-btn"
+                        id="btnToggleTheme"
+                        title="Toggle light / dark mode"
+                        aria-label="Toggle theme"
+                    >
+                        <!-- Sun icon (shown in dark mode) -->
+                        <svg id="iconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none;">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <!-- Moon icon (shown in light mode) -->
+                        <svg id="iconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Cat mascot in header -->
+                <img
+                    src="assets/happy_sitting_cat-removebg-preview.png"
+                    alt=""
+                    class="panel-header-cat"
+                    aria-hidden="true"
+                >
             </div>
+
+            <!-- Content -->
             <div class="panel-content">
+
+                <!-- Usage section -->
                 <div class="panel-section panel-section-highlight usage-card">
                     <div class="section-intro">
                         <span class="section-kicker">Usage</span>
@@ -209,6 +289,7 @@
                     </div>
                 </div>
 
+                <!-- Behavior section -->
                 <div class="panel-section">
                     <div class="section-intro">
                         <span class="section-kicker">Behavior</span>
@@ -219,12 +300,10 @@
                             <input type="checkbox" id="enableTools">
                             <label for="enableTools">Enable Tools</label>
                         </div>
-
                         <div class="checkbox-group">
                             <input type="checkbox" id="enableMarkdown" checked>
                             <label for="enableMarkdown">Enable Markdown Rendering</label>
                         </div>
-
                         <div class="checkbox-group">
                             <input type="checkbox" id="enableStreaming">
                             <label for="enableStreaming">Enable Streaming</label>
@@ -232,6 +311,7 @@
                     </div>
                 </div>
 
+                <!-- Tools JSON section -->
                 <div class="panel-section">
                     <div class="input-group">
                         <label>Tools JSON Definition (Edit Here)</label>
@@ -243,6 +323,7 @@
                     </div>
                 </div>
 
+                <!-- Tool implementations -->
                 <div class="panel-section">
                     <div class="input-group">
                         <label>Tool Implementations (JavaScript)</label>
@@ -259,6 +340,7 @@ return {
                     </div>
                 </div>
 
+                <!-- Code generation section -->
                 <div class="panel-section">
                     <div class="section-intro">
                         <span class="section-kicker">Reference</span>
@@ -279,6 +361,7 @@ return {
                     </div>
                 </div>
 
+                <!-- Import / Export -->
                 <div class="panel-section">
                     <div class="btn-group stacked-buttons">
                         <button class="secondary" onclick="document.getElementById('importFile').click()">Import Chat</button>
@@ -287,12 +370,12 @@ return {
                     <input type="file" id="importFile" accept=".json" style="display: none;">
                 </div>
 
+                <!-- Routing section -->
                 <div class="panel-section">
                     <div class="section-intro">
                         <span class="section-kicker">Routing</span>
                         <p>Manage proxy behavior for hosted APIs and local model servers.</p>
                     </div>
-
                     <div class="input-group">
                         <div class="checkbox-group advanced-toggle">
                             <input type="checkbox" id="enableProxy" checked>
@@ -308,21 +391,29 @@ return {
                     </div>
                 </div>
 
+                <!-- Footer with GitHub link and peeking cat -->
                 <div class="sidebar-footer">
                     <a href="https://github.com/Myster-Pmf/DevTalk" target="_blank" class="github-link">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
-                            </path>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
                         </svg>
                         View on GitHub
                     </a>
+
+                    <!-- Peeking dark cat decoration -->
+                    <div class="cat-peeking-wrapper">
+                        <img
+                            src="assets/peeking_dark_cat-removebg-preview.png"
+                            alt=""
+                            aria-hidden="true"
+                        >
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- ========== CONFIRM MODAL ========== -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <h3 id="modalTitle">Clear Chat History?</h3>

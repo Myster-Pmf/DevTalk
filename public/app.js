@@ -68,6 +68,47 @@ let currentTools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
 let pendingImages = [];
 const tabRuntimeState = new Map();
 
+// --- THEME ---
+
+/**
+ * Initialize theme from localStorage on page load.
+ * Defaults to 'light' if no preference is stored.
+ */
+function initTheme() {
+    const saved = localStorage.getItem('devtalk_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    updateThemeIcons(saved);
+}
+
+/**
+ * Toggle between light and dark themes and persist to localStorage.
+ */
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('devtalk_theme', next);
+    updateThemeIcons(next);
+}
+
+/**
+ * Show the correct sun/moon icon based on current theme.
+ * In light mode → show moon icon (click to go dark).
+ * In dark mode  → show sun icon (click to go light).
+ */
+function updateThemeIcons(theme) {
+    const sun  = document.getElementById('iconSun');
+    const moon = document.getElementById('iconMoon');
+    if (!sun || !moon) return;
+    if (theme === 'dark') {
+        sun.style.display  = 'block';
+        moon.style.display = 'none';
+    } else {
+        sun.style.display  = 'none';
+        moon.style.display = 'block';
+    }
+}
+
 function getTabRuntimeState(tab) {
     if (!tab) return { isGenerating: false, abortController: null };
     if (!tabRuntimeState.has(tab.id)) {
@@ -91,11 +132,22 @@ function updateSendButtonState() {
     if (!btnSend) return;
 
     if (runtime.isGenerating) {
-        btnSend.textContent = 'Stop';
+        btnSend.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;margin-right:4px;vertical-align:-2px;">
+                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+            </svg>
+            Stop
+        `;
         btnSend.classList.add('is-generating');
         btnSend.title = 'Stop generating';
     } else {
-        btnSend.textContent = 'Send';
+        btnSend.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;margin-right:4px;vertical-align:-2px;">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Send
+        `;
         btnSend.classList.remove('is-generating');
         btnSend.title = 'Send message';
     }
@@ -413,6 +465,12 @@ function init() {
     document.getElementById('btnToggleRight').onclick = () => toggleSidebar('right');
     document.getElementById('sidePaneOverlay').onclick = closeAllSidebars;
 
+    // Theme Toggle
+    const btnTheme = document.getElementById('btnToggleTheme');
+    if (btnTheme) btnTheme.onclick = toggleTheme;
+    initTheme();
+
+    // Copy generated code
     document.getElementById('btnCopyGenCode').onclick = () => {
         const output = document.getElementById('codeOutput');
         output.select();
@@ -1441,7 +1499,18 @@ function renderMessages() {
     messages.forEach(msg => {
         if (isAssistantMessage(msg)) ensureAssistantVersionShape(msg);
     });
-    els.messages.innerHTML = messages.map((msg, i) => renderMessageHTML(msg, i)).join('');
+
+    if (messages.length === 0) {
+        els.messages.innerHTML = `
+            <div class="chat-placeholder">
+                <img src="assets/happy_sitting_cat-removebg-preview.png" alt="Happy Cat" class="placeholder-cat">
+                <h2>Meow! Welcome to DevTalk</h2>
+                <p>Start a conversation by typing your prompt below, or select a saved model configuration on the left to get started!</p>
+            </div>
+        `;
+    } else {
+        els.messages.innerHTML = messages.map((msg, i) => renderMessageHTML(msg, i)).join('');
+    }
 
     // Post-process for HighlightJS and Copy Buttons
     processMessageContent();
