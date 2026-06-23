@@ -2136,16 +2136,16 @@ function renderImagePreviews() {
     }
 
     previewArea.style.display = 'flex';
-    previewArea.innerHTML = `
-        <div class="image-warning">
-            <span>⚠️ Vision models only</span>
-        </div>
-    ` + pendingImages.map((img, i) => `
+    previewArea.innerHTML = pendingImages.map((img, i) => `
         <div class="image-preview-item">
             <img src="${img.data}" alt="${escapeHtml(img.name)}">
-            <button class="image-preview-remove" onclick="removePreviewImage(${i})">×</button>
+            <button class="image-preview-remove" onclick="removePreviewImage(${i})">&times;</button>
         </div>
-    `).join('');
+    `).join('') + `
+        <div class="image-warning">
+            <span>Vision models only</span>
+        </div>
+    `;
 }
 
 function removePreviewImage(index) {
