@@ -618,6 +618,9 @@ button.danger:hover {
     align-items: center;
     gap: 12px;
     padding-right: 14px;
+    overflow: visible;
+    height: 44px;
+    box-sizing: border-box;
 }
 
 .workspace-copy {
@@ -652,15 +655,17 @@ button.danger:hover {
 
 .workspace-cat-peeking {
     position: relative;
-    height: 58px;
+    height: 40px;
     width: auto;
     object-fit: contain;
     pointer-events: none;
     user-select: none;
     opacity: 0.92;
-    margin-right: 4px;
+    margin-right: 6px;
+    margin-bottom: -18px;
     flex-shrink: 0;
-    transform: translateY(6px);
+    align-self: flex-end;
+    z-index: 3;
 }
 
 .tabs {
@@ -882,16 +887,7 @@ button.danger:hover {
     max-width: 92%;
 }
 
-.message.role-user::before {
-    background: linear-gradient(90deg, var(--accent-green), #34d399, transparent);
-}
-
-.message.role-user .message-role {
-    background: rgba(16, 185, 129, 0.08);
-    color: var(--accent-green);
-    border-color: rgba(16, 185, 129, 0.25);
-}
-
+/* Base gradient bar for all messages (AI) */
 .message::before {
     content: '';
     position: absolute;
@@ -901,6 +897,17 @@ button.danger:hover {
     height: 3px;
     background: linear-gradient(90deg, var(--accent), var(--accent-2), transparent);
     border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+/* User bubble overrides — must come AFTER the base rule to win the cascade */
+.message.role-user::before {
+    background: linear-gradient(90deg, var(--accent-green), #34d399, transparent);
+}
+
+.message.role-user .message-role {
+    background: rgba(16, 185, 129, 0.08);
+    color: var(--accent-green);
+    border-color: rgba(16, 185, 129, 0.25);
 }
 
 .message-header {
