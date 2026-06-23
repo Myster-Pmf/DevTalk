@@ -1106,64 +1106,146 @@ button.danger:hover {
 }
 
 .composer-shell {
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    position: relative;
-    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 8px 12px;
     background: var(--input-bg);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    padding: 10px;
-    transition: border-color var(--transition), box-shadow var(--transition);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition);
+    position: relative;
+    z-index: 10;
+}
+
+.composer-shell::after {
+    content: '';
+    position: absolute;
+    bottom: -1.5px;
+    left: 24px;
+    width: 40px;
+    height: 3px;
+    background: #10b981;
+    border-radius: 99px;
+    opacity: 0;
+    transition: opacity var(--transition), width var(--transition);
+}
+
+.composer-shell:focus-within::after {
+    opacity: 1;
+    width: 60px;
 }
 
 .composer-shell:focus-within {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
 }
 
-.composer-tools {
-    display: flex;
+.composer-shell .attach-btn {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-soft);
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all var(--transition);
+    margin-bottom: 2px;
 }
 
-.composer-hint {
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--text-muted);
-    font-style: italic;
-}
-
-.input-row {
-    display: flex;
-    align-items: stretch;
-    gap: 10px;
+.composer-shell .attach-btn:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+    transform: scale(1.05);
 }
 
 #userInput {
-    min-height: 86px;
-    border-radius: 10px;
+    flex: 1;
+    min-height: 24px;
+    height: 24px;
+    max-height: 120px;
+    padding: 6px 4px;
     background: transparent;
-    border-color: transparent;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
     resize: none;
-    font-family: 'Nunito', 'Manrope', sans-serif;
-    font-size: 13px;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.5;
     color: var(--text);
+    overflow-y: auto;
 }
 
-#userInput:focus {
-    border-color: transparent;
-    box-shadow: none;
+#userInput::-webkit-scrollbar {
+    width: 4px;
 }
 
-.composer-actions {
+.composer-shell .composer-actions {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 96px;
-    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: auto;
+    flex-shrink: 0;
+}
+
+.clear-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color var(--transition);
+    min-height: unset !important;
+    text-transform: none !important;
+}
+
+.clear-btn:hover {
+    color: #ff6b6b !important;
+    background: transparent !important;
+}
+
+#btnSend {
+    width: 38px;
+    height: 38px;
+    min-height: 38px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+    transition: all var(--transition) !important;
+    flex-shrink: 0;
+}
+
+#btnSend:hover {
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+    transform: translateY(-1px);
+}
+
+#btnSend:active {
+    transform: translateY(1px);
+}
+
+#btnSend.is-generating {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25) !important;
+    color: #ffffff !important;
 }
 
 /* =============================================

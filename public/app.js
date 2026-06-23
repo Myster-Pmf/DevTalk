@@ -133,20 +133,18 @@ function updateSendButtonState() {
 
     if (runtime.isGenerating) {
         btnSend.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;margin-right:4px;vertical-align:-2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <rect x="4" y="4" width="16" height="16" rx="2"></rect>
             </svg>
-            Stop
         `;
         btnSend.classList.add('is-generating');
         btnSend.title = 'Stop generating';
     } else {
         btnSend.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;margin-right:4px;vertical-align:-2px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
-            Send
         `;
         btnSend.classList.remove('is-generating');
         btnSend.title = 'Send message';
@@ -417,6 +415,12 @@ function init() {
                 sendMessage();
             }
         }
+    });
+
+    // Auto-grow input height (max 5 rows)
+    els.userInput.addEventListener('input', () => {
+        els.userInput.style.height = 'auto';
+        els.userInput.style.height = els.userInput.scrollHeight + 'px';
     });
 
     // Init UI
@@ -1034,6 +1038,7 @@ async function sendMessage(isRegen = false, regenTargetIndex = null) {
         const messageContent = formatMessageContent(textContent, pendingImages);
         tab.messages.push({ role: 'user', content: messageContent });
         els.userInput.value = '';
+        els.userInput.style.height = 'auto';
         clearPendingImages();
         renderMessages();
         updateGeneratedCode();
