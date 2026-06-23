@@ -1,7 +1,7 @@
 # DevTalk
 
 <p align="center">
-  <img src="public/assets/devtalk_logo.svg" alt="DevTalk logo" width="96" />
+  <img src="public/assets/devtalk_logo.png" alt="DevTalk logo" width="96" />
 </p>
 
 <p align="center">
@@ -15,31 +15,30 @@
   <img src="https://img.shields.io/badge/license-MIT-238636?style=for-the-badge" alt="MIT license" />
 </p>
 
-![DevTalk Interface](public/assets/devtalk_interface.png)
-
 > [!NOTE]
 > DevTalk stores its working state locally in your browser, including saved models, tabs, tool definitions, and preferences. Requests only leave your machine when you send them to a configured provider endpoint or through the optional proxy routes.
 
 ## Highlights
 
-- Compare prompt runs across multiple tabs with separate tab-level system prompts.
+- Compare prompt runs across multiple tabs, each with its own system prompt and chat history.
 - Save and reuse model configurations with API key, base URL, temperature, max tokens, and vision support.
 - Work with OpenAI-compatible APIs, Ollama-style endpoints, and Lightning.ai-style token handling.
 - Toggle streaming, Markdown rendering, tools, proxy usage, and local-network proxy bypass from the UI.
-- Attach images for vision-capable models.
+- Attach images for vision-capable models — previewed inline above the composer before sending.
 - Simulate tool calls with editable JSON schemas and in-browser JavaScript implementations.
 - Regenerate assistant replies into version history and switch between versions later.
 - Inspect response metadata including timing and token usage.
 - Generate request snippets in `curl`, Python `requests`, and Node `fetch`.
 - Export and import both model libraries and full playground sessions.
+- Switch between a dark and light theme from the toolbar.
 
 ## Screens and Workflow
 
 DevTalk is organized into three working areas:
 
-- Left panel: model configuration and saved model library
-- Center panel: tabs, chat history, composer, and image attachments
-- Right panel: token usage, behavior toggles, tools editor, tool code, and generated request code
+- **Left panel** — model configuration and saved model library
+- **Center panel** — tabs, chat history, auto-expanding composer, and image attachments
+- **Right panel** — token usage, behavior toggles, tools editor, tool code, and generated request code
 
 That layout makes it easy to tweak a model, run a prompt, inspect the result, then immediately compare again in another tab.
 
@@ -49,6 +48,7 @@ That layout makes it easy to tweak a model, run a prompt, inspect the result, th
 
 - Reusable saved model library
 - Per-model API key, base URL, temperature, max token limit, and vision toggle
+- Show / hide API key toggle with SVG eye icon
 - Support for direct browser calls or proxy-based calls
 - Automatic proxy bypass for localhost and local network URLs when enabled
 - Import/export for saved model presets
@@ -56,11 +56,15 @@ That layout makes it easy to tweak a model, run a prompt, inspect the result, th
 ### Chat Experience
 
 - Multi-tab workflow with persistent tab state
-- Per-tab system prompts
-- Real-time streaming with `Send` to `Stop` state switching
+- Per-tab system prompt
+- Real-time streaming with `Send` / `Stop` state switching
+- Auto-expanding composer (grows up to 5 lines, then scrolls) with image attachment area above it
 - Message editing, deletion, copy, and resend-from-here actions
 - Assistant response regeneration with version navigation
-- Image attachment support for vision-capable models
+- User message bubbles styled in green; assistant bubbles in the accent palette
+- Image attachment preview stacked above the composer; remove individual attachments before sending
+- Clear chat button on the active tab
+- Dark and light theme, toggled from the toolbar
 - Mobile-friendly layout with slide-out side panels
 
 ### Tooling and Inspection
@@ -69,7 +73,7 @@ That layout makes it easy to tweak a model, run a prompt, inspect the result, th
 - In-browser JavaScript tool simulation
 - Automatic insertion of tool results into the conversation
 - Toggleable Markdown rendering with syntax highlighting
-- Copy buttons for code blocks
+- Code snippet blocks with darker themed backgrounds and copy buttons
 - Response metadata details such as:
   - provider label
   - duration
@@ -117,7 +121,7 @@ DevTalk/
 
 ## Running Locally
 
-This repository currently does not include npm scripts or installed package dependencies, so the older `npm install` and `npm run dev` instructions are no longer accurate.
+No npm install step is needed for the frontend. The `package.json` exists only to declare the Node engine version for Vercel deployments and to expose the proxy entry point.
 
 ### Frontend Only
 
@@ -144,7 +148,7 @@ The proxy mode is useful when:
 ## Quick Start
 
 1. Add a model in the left panel.
-2. Enter the provider base URL and API key.
+2. Enter the provider base URL and API key (use the eye icon to reveal/hide it).
 3. Enable `Vision Model` if that model should receive images.
 4. Turn on tools, Markdown, streaming, or proxy options in the right panel as needed.
 5. Start chatting in the center panel.
