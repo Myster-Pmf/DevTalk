@@ -57,7 +57,7 @@
     --scrollbar-hover: rgba(196, 95, 160, 0.55);
 
     --checkbox-accent: #c45fa0;
-    --code-bg: rgba(240, 218, 232, 0.85);
+    --code-bg: rgba(205, 170, 195, 0.75);
     --code-border: rgba(196, 95, 160, 0.18);
 
     --section-stripe: rgba(196, 95, 160, 0.06);
@@ -114,7 +114,7 @@
     --scrollbar-hover: rgba(180, 100, 220, 0.5);
 
     --checkbox-accent: #c47aee;
-    --code-bg: rgba(12, 6, 20, 0.9);
+    --code-bg: rgba(8, 3, 16, 0.88);
     --code-border: rgba(180, 100, 220, 0.18);
 
     --section-stripe: rgba(180, 100, 220, 0.05);
@@ -650,17 +650,17 @@ button.danger:hover {
     flex-shrink: 0;
 }
 
-.tabs-cat-peeking {
-    position: absolute;
-    bottom: -1px;
-    right: 56px;
-    height: 48px;
+.workspace-cat-peeking {
+    position: relative;
+    height: 58px;
     width: auto;
     object-fit: contain;
     pointer-events: none;
     user-select: none;
-    opacity: 0.95;
-    z-index: 1;
+    opacity: 0.92;
+    margin-right: 4px;
+    flex-shrink: 0;
+    transform: translateY(6px);
 }
 
 .tabs {
