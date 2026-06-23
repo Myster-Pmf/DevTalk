@@ -645,10 +645,27 @@ button.danger:hover {
 
 .workspace-meta { display: none; }
 
-/* =============================================
-   TABS
-   ============================================= */
+.tabs-wrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.tabs-cat-peeking {
+    position: absolute;
+    bottom: -1px;
+    right: 56px;
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.95;
+    z-index: 1;
+}
+
 .tabs {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: flex-end;
     gap: 4px;
@@ -766,7 +783,7 @@ button.danger:hover {
     gap: 10px;
     overscroll-behavior: contain;
     /* Chat background image */
-    background-image: url('assets/chat_background_light.png');
+    background-image: url('assets/chat_background_light.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -774,7 +791,7 @@ button.danger:hover {
 }
 
 [data-theme="dark"] .messages {
-    background-image: url('assets/chat_background_dark.png');
+    background-image: url('assets/chat_background_dark.jpg');
 }
 
 /* Subtle overlay so messages are readable over the background */
@@ -863,6 +880,16 @@ button.danger:hover {
     border-color: var(--border-strong);
     align-self: flex-end;
     max-width: 92%;
+}
+
+.message.role-user::before {
+    background: linear-gradient(90deg, var(--accent-green), #34d399, transparent);
+}
+
+.message.role-user .message-role {
+    background: rgba(16, 185, 129, 0.08);
+    color: var(--accent-green);
+    border-color: rgba(16, 185, 129, 0.25);
 }
 
 .message::before {
@@ -1370,7 +1397,11 @@ button.danger:hover {
    ============================================= */
 .sidebar-footer {
     margin-top: auto;
-    padding-top: 2px;
+    padding-top: 12px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .github-link {
@@ -1510,6 +1541,19 @@ button.danger:hover {
     opacity: 0.9;
 }
 
+.connection-cat {
+    position: absolute;
+    top: 6px;
+    right: 12px;
+    height: 52px;
+    width: auto;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.95;
+    z-index: 5;
+}
+
 /* Sleeping cat at panel bottom */
 .panel-footer-cat {
     display: block;
@@ -1525,16 +1569,17 @@ button.danger:hover {
 /* Cat peeking from bottom of right panel */
 .cat-peeking-wrapper {
     position: relative;
-    height: 40px;
+    height: 38px;
+    width: 58px;
     overflow: hidden;
-    margin-top: 4px;
+    flex-shrink: 0;
 }
 
 .cat-peeking-wrapper img {
     position: absolute;
     bottom: -6px;
-    right: 10px;
-    height: 58px;
+    right: 0;
+    height: 54px;
     width: auto;
     object-fit: contain;
     pointer-events: none;
