@@ -15,6 +15,17 @@
   <img src="https://img.shields.io/badge/license-MIT-238636?style=for-the-badge" alt="MIT license" />
 </p>
 
+<table>
+  <tr>
+    <td align="center"><b>🌙 Dark Mode</b></td>
+    <td align="center"><b>☀️ Light Mode</b></td>
+  </tr>
+  <tr>
+    <td><img src="public/assets/devtalk_interface_dark.jpg" alt="DevTalk dark mode interface" /></td>
+    <td><img src="public/assets/devtalk_interface_light.jpg" alt="DevTalk light mode interface" /></td>
+  </tr>
+</table>
+
 > [!NOTE]
 > DevTalk stores its working state locally in your browser, including saved models, tabs, tool definitions, and preferences. Requests only leave your machine when you send them to a configured provider endpoint or through the optional proxy routes.
 
