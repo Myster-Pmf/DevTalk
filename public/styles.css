@@ -884,8 +884,6 @@ button.danger:hover {
 .message.role-user {
     background: var(--message-user-bg);
     border-color: var(--border-strong);
-    align-self: flex-end;
-    max-width: 92%;
 }
 
 /* Base gradient bar for all messages (AI) */
