@@ -1604,7 +1604,7 @@ function renderMessageHTML(msg, i) {
         : '';
 
     return `
-        <div class="message" id="msg-container-${i}">
+        <div class="message role-${msg.role}" id="msg-container-${i}">
             <div class="message-header">
                 <div class="message-meta">
                     <span class="message-role">${roleDisplay}</span>
