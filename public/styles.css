@@ -1206,18 +1206,20 @@ button.danger:hover {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: var(--text-muted);
+    color: var(--text-soft);
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
     padding: 0 4px;
-    transition: color var(--transition);
+    transition: color var(--transition), opacity var(--transition);
     min-height: unset !important;
     text-transform: none !important;
+    opacity: 0.75;
 }
 
 .clear-btn:hover {
-    color: #ff6b6b !important;
+    color: #ef4444 !important;
+    opacity: 1;
     background: transparent !important;
 }
 
