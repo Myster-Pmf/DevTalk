@@ -788,16 +788,18 @@ button.danger:hover {
     flex-direction: column;
     gap: 10px;
     overscroll-behavior: contain;
-    /* Chat background image */
+    /* Chat background image — right-aligned so the cat girl stays visible */
     background-image: url('assets/chat_background_light.jpg');
-    background-size: cover;
-    background-position: center;
+    background-size: auto 100%;
+    background-position: right center;
     background-repeat: no-repeat;
     position: relative;
 }
 
 [data-theme="dark"] .messages {
     background-image: url('assets/chat_background_dark.jpg');
+    background-size: auto 100%;
+    background-position: right center;
 }
 
 /* Subtle overlay so messages are readable over the background */
@@ -1704,8 +1706,10 @@ button.danger:hover {
     position: fixed;
     inset: 0;
     z-index: 1900;
-    background: rgba(20, 10, 35, 0.5);
-    backdrop-filter: blur(5px);
+    /* No blur — blur makes the whole page look broken on mobile */
+    background: rgba(10, 5, 20, 0.6);
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
 }
 
 .mobile-panel-header {
@@ -1836,9 +1840,16 @@ button.danger:hover {
     }
 
     .workspace-topbar {
-        flex-direction: column;
-        align-items: flex-start;
-        padding-right: 14px;
+        flex-direction: row;
+        align-items: center;
+        padding-right: 10px;
+        height: auto;
+        min-height: 44px;
+    }
+
+    .workspace-cat-peeking {
+        height: 34px;
+        margin-bottom: -12px;
     }
 }
 
